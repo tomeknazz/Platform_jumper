@@ -257,29 +257,29 @@ class Game:
                     if event.type == pygame.KEYDOWN:
                         self.player.last_movement = 2
                         # Jeśli strzałka w górę skok
-                        if event.key == pygame.K_UP:
+                        if event.key == pygame.K_w:
                             self.player.jumping = True
                             self.movement = [0, 0]
                             jump_start = time.time()
                             self.player.jump_time = time.time()
                         if not self.player.jumping:
                             # Strzałka lewo prawo (movement)
-                            if event.key == pygame.K_LEFT:
+                            if event.key == pygame.K_a:
                                 self.movement[0] = True
-                            if event.key == pygame.K_RIGHT:
+                            if event.key == pygame.K_d:
                                 self.movement[1] = True
                         else:
-                            if event.key == pygame.K_LEFT:
+                            if event.key == pygame.K_a:
                                 self.player.last_movement = 1
-                            if event.key == pygame.K_RIGHT:
+                            if event.key == pygame.K_d:
                                 self.player.last_movement = 0
 
                     if event.type == pygame.KEYUP:
-                        if event.key == pygame.K_LEFT:
+                        if event.key == pygame.K_a:
                             self.movement[0] = False
-                        if event.key == pygame.K_RIGHT:
+                        if event.key == pygame.K_d:
                             self.movement[1] = False
-                        if event.key == pygame.K_UP:
+                        if event.key == pygame.K_w:
                             # Liczenie czasu przytrzymania strzałki w górę i uzależnienie siły skoku od tego
                             jump_end = time.time()
                             jump_power = jump_end - jump_start
