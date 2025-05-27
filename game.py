@@ -64,7 +64,7 @@ class Game:
             "clouds": load_images("clouds"),
             "player": load_image("player_correct.png"),
             "player/idle": Animation(load_images("entities/player/idle"), img_dur=10),
-            "player/run": Animation(load_images("entities/player/run"), img_dur=4),
+            "player/run": Animation(load_images("entities/player/run"), img_dur=10),
             "player/jump": Animation(load_images("entities/player/jump"), img_dur=4),
             "player/fall": Animation(load_images("entities/player/fall")),
             "player/crouch": Animation(load_images("entities/player/crouch"), img_dur=4),
@@ -128,7 +128,8 @@ class Game:
     # Metoda do stworzenia i wyświetlenia menu z level_picker'em
     def level_picker(self):
         # Tablica wszystkich poziomów
-        levels = ['Galactic Tower', 'Winter Wilds', 'Corrupted Fields']
+        #levels = ['Galactic Tower', 'Winter Wilds', 'Corrupted Fields']
+        levels = ['Galactic Tower']
         # Stworzenie przycisków
         buttons = [Button(level, RES_WIDTH/2-150, RES_HEIGHT/2-50 + i * 60, 300, 50) for i, level in enumerate(levels)]
         # Główna pętla level_picker'a
@@ -216,7 +217,7 @@ class Game:
                 elapsed_time = 0
                 pygame.display.update()
             else:
-                # Tlo
+                # Tlo dynamiczne
                 #self.display.blit(self.assets[self.current_level], (0, 0))
                 self.display.blit(pygame.transform.scale(self.assets[self.current_level], (self.display.get_width(), self.display.get_height())), (0, 0))
                 # Przesuwanie "kamery" za graczem
@@ -249,6 +250,25 @@ class Game:
                 time_font = pygame.font.Font(None, 60)
                 time_text = time_font.render(time_str, True, (255, 255, 255))
 
+                if self.player.jumping:
+                    jump_duration = time.time() - self.player.jump_start_time
+                    self.player.jump_power = min(jump_duration, self.player.max_jump_power)
+
+                # Rysowanie paska siły skoku
+                if self.player.jumping:
+                    filled_width = int(100 * (self.player.jump_power / self.player.max_jump_power))
+                    bar_height = 5
+                    bar_x = self.player.rect().centerx - render_scroll[0] - 50  # Adjust for camera scroll
+                    bar_y = self.player.rect().top - render_scroll[1] - 20  # Adjust for camera scroll
+
+                    # Draw the filled portion of the bar (orange)
+                    pygame.draw.rect(self.display, (255, 165, 0), (bar_x, bar_y, filled_width, bar_height))
+                    # Draw the remaining portion of the bar (gray)
+                    pygame.draw.rect(self.display, (128, 128, 128),
+                                     (bar_x + filled_width, bar_y, 100 - filled_width, bar_height))
+                    # Draw the border of the bar (black) optionally
+                    #pygame.draw.rect(self.display, (0, 0, 0), (bar_x, bar_y, 100, bar_height), 2)
+
                 # Event handler
                 for event in pygame.event.get():
                     if event.type == pygame.QUIT:
@@ -256,14 +276,15 @@ class Game:
                         sys.exit()
                     if event.type == pygame.KEYDOWN:
                         self.player.last_movement = 2
-                        # Jeśli strzałka w górę skok
+                        # Jeśli w to skok
                         if event.key == pygame.K_w:
                             self.player.jumping = True
-                            self.movement = [0, 0]
                             jump_start = time.time()
+                            self.player.jump_start_time = time.time()
+                            self.movement = [0, 0]
                             self.player.jump_time = time.time()
+                        # Only allow left/right movement if not jumping
                         if not self.player.jumping:
-                            # Strzałka lewo prawo (movement)
                             if event.key == pygame.K_a:
                                 self.movement[0] = True
                             if event.key == pygame.K_d:
@@ -280,11 +301,11 @@ class Game:
                         if event.key == pygame.K_d:
                             self.movement[1] = False
                         if event.key == pygame.K_w:
-                            # Liczenie czasu przytrzymania strzałki w górę i uzależnienie siły skoku od tego
-                            jump_end = time.time()
-                            jump_power = jump_end - jump_start
-                            if jump_power < 0.8:
-                                self.player.jump(jump_power)
+                            self.player.jumping = False
+                            jump_duration = time.time() - self.player.jump_start_time
+                            self.player.jump_power = min(jump_duration, self.player.max_jump_power)
+                            self.player.jump(self.player.jump_power)
+                            self.player.reset_jump_power()
                 # Wyświetlenie wszystkiego na ekran
                 self.screen.blit(pygame.transform.scale(self.display, self.screen.get_size()), (0, 0))
                 self.screen.blit(time_text, (10, 10))

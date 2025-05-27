@@ -40,56 +40,46 @@ class PhysicsEntity:
 
     # Metoda update'ująca gracza
     def update(self, tilemap, movement=(0, 0)):
-        # Reset kolizji
         self.collisions = {"up": False, "down": False, "right": False, "left": False}
-        # Ruch gracza ustawiony poprzez listę movement
-        frame_movement = (movement[0] + self.velocity[0], movement[1] + self.velocity[1])
-        # Ustawienie pozycji w osi x
-        # + sprawdzenie, czy w śniegu
-        if self.snow and not self.jumping:
-            self.velocity[0] = 0
-        else:
-            self.pos[0] += frame_movement[0]
+        # Separate axis movement to prevent tunneling through walls
 
-        # stworzenie hitboxu
+        # --- X axis movement and collision ---
+        self.pos[0] += movement[0] + self.velocity[0]
         entity_rect = self.rect()
-        # Fizyka os x
         for rect in tilemap.physics_rects(self.pos):
             if entity_rect.colliderect(rect[0]):
-                if frame_movement[0] > 0:
+                if movement[0] + self.velocity[0] > 0:
                     entity_rect.right = rect[0].left
                     self.collisions["right"] = True
-                if frame_movement[0] < 0:
+                if movement[0] + self.velocity[0] < 0:
                     entity_rect.left = rect[0].right
                     self.collisions["left"] = True
                 self.pos[0] = entity_rect.x
-        # Ustawienie pozycji os y
-        self.pos[1] += frame_movement[1]
-        # Hitbox
+
+        # --- Y axis movement and collision ---
+        self.pos[1] += movement[1] + self.velocity[1]
         entity_rect = self.rect()
-        # Fizyka os y
         for rect in tilemap.physics_rects(self.pos):
             if entity_rect.colliderect(rect[0]):
-                if frame_movement[1] > 0:
+                if movement[1] + self.velocity[1] > 0:
                     entity_rect.bottom = rect[0].top
                     self.collide_type_bottom = rect[1]
                     self.collisions["down"] = True
-                if frame_movement[1] < 0:
+                if movement[1] + self.velocity[1] < 0:
                     entity_rect.top = rect[0].bottom
                     self.collisions["up"] = True
                 self.pos[1] = entity_rect.y
-        # Obrót postaci lewo/prawo
+
+        # Flip sprite
         if movement[0] > 0:
             self.flip = False
         if movement[0] < 0:
             self.flip = True
 
-        # Fizyka os y spowalnianie spadku w dół
+        # Gravity and vertical velocity
         self.velocity[1] = min(5, self.velocity[1] + 0.1)
-        # Resetowanie prędkości po kolizji od gory albo dolu
         if self.collisions["down"] or self.collisions["up"]:
             self.velocity[1] = 0
-        # Aktualizacja animacji
         self.animation.update()
 
     # Renderowanie gracza
@@ -110,10 +100,18 @@ class Player(PhysicsEntity):
         self.jump_time = 0
         self.win = False
         self.total_jumps = 0
+        self.jump_power = 0  # Dodaj atrybut do przechowywania siły skoku
+        self.max_jump_power = 0.8  # Maksymalna siła skoku
+        self.airborne = False
+
+    def reset_jump_power(self):
+        self.jump_power = 0
 
     # Metoda do update'tu gracza
     def update(self, tilemap, movement=(0, 0)):
-        # Skopiowanie metody update z poprzedniej klasy
+        # Prevent horizontal movement if airborne
+        if self.air_time > 4:
+            movement = (0, movement[1])
         super().update(tilemap, movement=movement)
         # Sprawdzanie, z jakim typem bloku występuje kolizja
         # i działanie w trakcie kolizji z blokiem od dołu
@@ -140,9 +138,9 @@ class Player(PhysicsEntity):
                 self.velocity[0] = 0
 
         # Odbicie od ściany w trakcie skoku
-        if self.collisions["right"] and self.air_time > 4:
+        if self.collisions["right"] and self.air_time > 2:
             self.velocity[0] = -1.8
-        elif self.collisions["left"] and self.air_time > 4:
+        elif self.collisions["left"] and self.air_time > 2:
             self.velocity[0] = 1.8
 
         # Zmiana offsetu animacji dla kucania z powodu mniejszego rozmiaru png
@@ -168,7 +166,7 @@ class Player(PhysicsEntity):
         # Sprawdzanie jak długo gracz trzyma strzałkę i gdy czas dotrze do max = 0.8 automatycznie skacze
         if self.jumping:
             t_now = time.time()
-            if t_now - self.jump_time >= 0.8:
+            if t_now - self.jump_time >= self.max_jump_power:
                 self.jump(0.8)
             if self.last_movement == 0:
                 self.flip = False
@@ -191,4 +189,4 @@ class Player(PhysicsEntity):
             self.air_time = 5
             if self.collisions["down"]:
                 self.last_movement = 2
-
+                self.jumping = False
