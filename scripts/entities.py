@@ -101,8 +101,7 @@ class Player(PhysicsEntity):
         self.win = False
         self.total_jumps = 0
         self.jump_power = 0  # Dodaj atrybut do przechowywania siły skoku
-        self.max_jump_power = 0.8  # Maksymalna siła skoku
-        self.airborne = False
+        self.max_jump_power = 0.85  # Maksymalna siła skoku
 
     def reset_jump_power(self):
         self.jump_power = 0
@@ -163,11 +162,11 @@ class Player(PhysicsEntity):
         elif not self.jumping and movement[0] == 0:
             self.set_action("idle")
 
-        # Sprawdzanie jak długo gracz trzyma strzałkę i gdy czas dotrze do max = 0.8 automatycznie skacze
+        # Sprawdzanie jak długo gracz trzyma W i gdy czas dotrze do max automatycznie skacze
         if self.jumping:
             t_now = time.time()
             if t_now - self.jump_time >= self.max_jump_power:
-                self.jump(0.8)
+                self.jump(self.max_jump_power)
             if self.last_movement == 0:
                 self.flip = False
             if self.last_movement == 1:

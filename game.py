@@ -37,7 +37,7 @@ class Game:
     def __init__(self):
         pygame.init()
         # Podstawowe atrybuty dotyczące rozmiaru i tytułu okna, wraz z ograniczeniem fps
-        pygame.display.set_caption("Gra")
+        pygame.display.set_caption("Platform Jumper")
         self.screen = pygame.display.set_mode((RES_WIDTH, RES_HEIGHT))
         self.display = pygame.Surface((RES_WIDTH/2, RES_HEIGHT/2))
         self.clock = pygame.time.Clock()
@@ -59,15 +59,17 @@ class Game:
             "ice": load_images("tiles/ice"),
             "win_tiles": load_images("tiles/win_tiles"),
             "Winter Wilds": load_image("WWilds.png"),
-            "Galactic Tower": load_image("GTower.png"),
+            # TODO: CHANGE TO GTOWER.png
+            "Galactic Tower": load_image("black.png"),
             "Corrupted Fields": load_image("CFields.png"),
             "clouds": load_images("clouds"),
             "player": load_image("player_correct.png"),
-            "player/idle": Animation(load_images("entities/player/idle"), img_dur=10),
-            "player/run": Animation(load_images("entities/player/run"), img_dur=10),
-            "player/jump": Animation(load_images("entities/player/jump"), img_dur=4),
+            # TODO: CHANGE TO 10,10,4,4
+            "player/idle": Animation(load_images("entities/player/idle"), img_dur=99999999999999999999999999999999999999),
+            "player/run": Animation(load_images("entities/player/run"), img_dur=99999999999999999999999999999999999999),
+            "player/jump": Animation(load_images("entities/player/jump"), img_dur=99999999999999999999999999999999999999),
             "player/fall": Animation(load_images("entities/player/fall")),
-            "player/crouch": Animation(load_images("entities/player/crouch"), img_dur=4),
+            "player/crouch": Animation(load_images("entities/player/crouch"), img_dur=99999999999999999999999999999999999999),
         }
         # Stworzenie chmur z użyciem klasy z pliku clouds
         self.clouds = Clouds(self.assets["clouds"], count=16)
@@ -80,7 +82,8 @@ class Game:
         # Atrybut z czasem rozpoczęcia gry to późniejszego liczenia go i wyświetlania
         self.start_time = 0
         # Załadowanie tła menu i przeskalowanie go
-        self.background_menu = pygame.image.load("data/images/menu_bg.png")
+        # TODO: CHANGE TO MENU_BG.png
+        self.background_menu = pygame.image.load("data/images/black.png")
         self.background_menu = pygame.transform.scale(self.background_menu, (RES_WIDTH, RES_HEIGHT))
         # Atrybut z obecnym poziomem
         self.current_level = None
@@ -128,6 +131,7 @@ class Game:
     # Metoda do stworzenia i wyświetlenia menu z level_picker'em
     def level_picker(self):
         # Tablica wszystkich poziomów
+        # TODO: UNCOMMENT
         #levels = ['Galactic Tower', 'Winter Wilds', 'Corrupted Fields']
         levels = ['Galactic Tower']
         # Stworzenie przycisków
@@ -213,7 +217,9 @@ class Game:
         while True:
             # Sprawdzenie, czy gracz wygrał
             if self.player.win:
-                self.display_summary(time_str)
+                # TODO: UNCOMMENT AND DELETE EXIT(0)
+                #self.display_summary(time_str)
+                exit(0)
                 elapsed_time = 0
                 pygame.display.update()
             else:
@@ -242,6 +248,7 @@ class Game:
 
                 self.tilemap.render_offset(self.display, offset=render_scroll)
 
+
                 # Timer
                 elapsed_time = (pygame.time.get_ticks() - self.start_time) / 1000
                 minutes = int(elapsed_time / 60)
@@ -250,22 +257,23 @@ class Game:
                 time_font = pygame.font.Font(None, 60)
                 time_text = time_font.render(time_str, True, (255, 255, 255))
 
-                if self.player.jumping:
-                    jump_duration = time.time() - self.player.jump_start_time
-                    self.player.jump_power = min(jump_duration, self.player.max_jump_power)
+                # TODO: UNCOMMENT
+                # if self.player.jumping:
+                #     jump_duration = time.time() - self.player.jump_start_time
+                #     self.player.jump_power = min(jump_duration, self.player.max_jump_power)
 
-                # Rysowanie paska siły skoku
-                if self.player.jumping:
-                    filled_width = int(100 * (self.player.jump_power / self.player.max_jump_power))
-                    bar_height = 5
-                    bar_x = self.player.rect().centerx - render_scroll[0] - 50  # Adjust for camera scroll
-                    bar_y = self.player.rect().top - render_scroll[1] - 20  # Adjust for camera scroll
-
-                    # Draw the filled portion of the bar (orange)
-                    pygame.draw.rect(self.display, (255, 165, 0), (bar_x, bar_y, filled_width, bar_height))
-                    # Draw the remaining portion of the bar (gray)
-                    pygame.draw.rect(self.display, (128, 128, 128),
-                                     (bar_x + filled_width, bar_y, 100 - filled_width, bar_height))
+                # # Rysowanie paska siły skoku
+                # if self.player.jumping:
+                #     filled_width = int(100 * (self.player.jump_power / self.player.max_jump_power))
+                #     bar_height = 5
+                #     bar_x = self.player.rect().centerx - render_scroll[0] - 50  # Adjust for camera scroll
+                #     bar_y = self.player.rect().top - render_scroll[1] - 20  # Adjust for camera scroll
+                #
+                #     # Draw the filled portion of the bar (orange)
+                #     pygame.draw.rect(self.display, (255, 165, 0), (bar_x, bar_y, filled_width, bar_height))
+                #     # Draw the remaining portion of the bar (gray)
+                #     pygame.draw.rect(self.display, (128, 128, 128),
+                #                      (bar_x + filled_width, bar_y, 100 - filled_width, bar_height))
                     # Draw the border of the bar (black) optionally
                     #pygame.draw.rect(self.display, (0, 0, 0), (bar_x, bar_y, 100, bar_height), 2)
 
@@ -308,7 +316,9 @@ class Game:
                             self.player.reset_jump_power()
                 # Wyświetlenie wszystkiego na ekran
                 self.screen.blit(pygame.transform.scale(self.display, self.screen.get_size()), (0, 0))
-                self.screen.blit(time_text, (10, 10))
+
+                # TODO: UNCOMMENT
+                #self.screen.blit(time_text, (10, 10))
                 pygame.display.update()
                 self.clock.tick(60)  # ograniczenie do 60fps
 
