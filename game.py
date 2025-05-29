@@ -156,6 +156,7 @@ class Game:
         play_button = Button('Play', RES_WIDTH/2-180, RES_HEIGHT/2-60, 360, 150, "data/images/banner_scroll_wide.png")
         exit_button = Button('Exit', RES_WIDTH/2-180, RES_HEIGHT/2+90, 360, 150, "data/images/banner_scroll_wide.png")
         help_button = Button('', RES_WIDTH * 0.01, RES_HEIGHT * 0.85, 100, 125, "data/images/help.png")
+        settings_button = Button('', RES_WIDTH*0.93, RES_HEIGHT * 0.01, 125, 125, "data/images/settings.png")
 
         # Play menu music once at menu entry
         self.audio.play_music('data/audio/menu_music.mp3', volume=0.20)
@@ -184,6 +185,7 @@ class Game:
             play_button.draw(self.screen)
             exit_button.draw(self.screen)
             help_button.draw(self.screen)
+            settings_button.draw(self.screen)
             mouse_x, mouse_y = pygame.mouse.get_pos()
             self.screen.blit(self.cursor_image, (mouse_x - self.cursor_offset[0], mouse_y - self.cursor_offset[1]))
             pygame.display.update()
@@ -199,6 +201,7 @@ class Game:
         arrow = Button('', RES_WIDTH*0.01, RES_HEIGHT*0.02, 125, 125, "data/images/arrow.png", flip_x=True)
         select_level_button = Button('Select Level', RES_WIDTH/2-470, RES_HEIGHT/2-400, 940, 350, "data/images/banner_title.png",font_size=45,offset_y=-10,highlight=False)
         help_button = Button('', RES_WIDTH * 0.01, RES_HEIGHT * 0.85, 100, 125, "data/images/help.png")
+        settings_button = Button('', RES_WIDTH * 0.93, RES_HEIGHT * 0.01, 125, 125, "data/images/settings.png")
         buttons = [Button(level, RES_WIDTH/2-265, RES_HEIGHT/2-50 + i * 120, 530, 110, "data/images/banner_scroll_wide_thin.png",0,0,font_size=25) for i, level in enumerate(levels)]
         # Główna pętla level_picker'a
         while True:
@@ -221,6 +224,7 @@ class Game:
             #return_button.draw(self.screen)
             arrow.draw(self.screen)
             help_button.draw(self.screen)
+            settings_button.draw(self.screen)
             for button in buttons:
                 button.draw(self.screen)
             mouse_x, mouse_y = pygame.mouse.get_pos()
