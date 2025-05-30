@@ -7,7 +7,7 @@ from scripts.audio import Audio
 from scripts.clouds import Clouds
 from scripts.entities import Player
 from scripts.tilemap import Tilemap
-from scripts.utility import load_image, load_images, Animation, save_to_excel, get_user_input
+from scripts.utility import load_image, load_images, Animation, save_to_excel
 
 RES_WIDTH = 1920
 RES_HEIGHT = 1080
@@ -31,6 +31,15 @@ class Button:
         self.image = self._scale_image_pixel_art(self.original_image, width, height)
         self.highlight = highlight
         self.font = pygame.font.Font(font_path, font_size)
+        self.hover_image = self._create_hover_image(self.image)
+
+    def _create_hover_image(self, image):
+        hover = image.copy()
+        # Bez pętli piksel po pikselu – szybciej przez powierzchnię
+        brightness_surface = pygame.Surface(image.get_size()).convert_alpha()
+        brightness_surface.fill((20, 20, 0, 0))  # tylko podbij RGB
+        hover.blit(brightness_surface, (0, 0), special_flags=pygame.BLEND_RGB_ADD)
+        return hover
 
     @staticmethod
     def _scale_image_pixel_art(image, target_w, target_h):
@@ -48,15 +57,7 @@ class Button:
         image_rect.y += self.offset[1]
 
         if self.rect.collidepoint(pygame.mouse.get_pos()) and self.highlight:
-            hover_image = self.image.copy()
-            for x in range(hover_image.get_width()):
-                for y in range(hover_image.get_height()):
-                    r, g, b, a = hover_image.get_at((x, y))
-                    if a > 0:
-                        r = min(255, r + 20)
-                        g = min(255, g + 20)
-                        hover_image.set_at((x, y), (r, g, b, a))
-            screen.blit(hover_image, image_rect)
+            screen.blit(self.hover_image, image_rect)
         else:
             screen.blit(self.image, image_rect)
 
@@ -67,6 +68,15 @@ class Button:
     def is_clicked(self):
         return self.rect.collidepoint(pygame.mouse.get_pos())
 
+def clean_transparent_pixels(surface, replace_with=(0, 0, 0, 0)):
+    width, height = surface.get_size()
+    for x in range(width):
+        for y in range(height):
+            r, g, b, a = surface.get_at((x, y))
+            if a == 0:
+                # Ustaw przezroczyste piksele na neutralny kolor (np. brąz z alhpa 0)
+                surface.set_at((x, y), replace_with)
+    return surface
 
 # Główna klasa gry
 class Game:
@@ -102,7 +112,7 @@ class Game:
             "ice": load_images("tiles/ice"),
             "win_tiles": load_images("tiles/win_tiles"),
             "Winter Wilds": load_image("WWilds.png"),
-            "Galactic Tower": load_image("GTower.png"),
+            "Galactic Tower": load_image("GTower.jpg"),
             "Corrupted Fields": load_image("CFields.png"),
             "clouds": load_images("clouds"),
             "player": load_image("player_correct.png"),
@@ -136,10 +146,10 @@ class Game:
         # Stworzenie przycisków
         self.help_button = Button('', RES_WIDTH * 0.01, RES_HEIGHT * 0.85, 100, 125, "data/images/help.png")
         self.settings_button = Button('', RES_WIDTH * 0.93, RES_HEIGHT * 0.01, 125, 125, "data/images/settings.png")
-        self.help_text = Button('Tutaj będzie Help', RES_WIDTH / 2 + 50, RES_HEIGHT / 2 - 50 + 10, 100, 125,
-                           "data/images/transparent.png")
-        self.settings_text = Button('Tutaj będzie Settings', RES_WIDTH / 2 + 50, RES_HEIGHT / 2 - 50 + 10, 100, 125,
-                               "data/images/transparent.png")
+        self.help_text = Button('Tutaj będzie Help', RES_WIDTH / 2 - 450, RES_HEIGHT / 2 - 125 + 10, 1000, 250,
+                           "data/images/banner_scroll_wide_thin.png",highlight=False)
+        self.settings_text = Button('Tutaj będzie Settings', RES_WIDTH / 2 - 450, RES_HEIGHT / 2 - 125 + 10, 1000, 250,
+                               "data/images/banner_scroll_wide_thin.png",highlight=False)
 
     # Metoda do resetowania atrybutów przed kolejnym rozpoczęciem rozgrywki
     def reset(self):
@@ -171,7 +181,7 @@ class Game:
                              "data/images/banner_scroll_wide.png")
 
         # Play menu music once at menu entry
-        self.audio.play_music('data/audio/menu_music.mp3', volume=0.25)
+        self.audio.play_music('data/audio/menu_music.mp3', volume=0.20)
         # Głowna pętla menu czekająca na eventy od gracza
         while True:
             self.reset()
@@ -194,8 +204,12 @@ class Game:
                         pygame.quit()
                         sys.exit()
                     if self.help_button.is_clicked():
+                        if self.settings:
+                            self.settings = False
                         self.help = not self.help
                     if self.settings_button.is_clicked():
+                        if self.help:
+                            self.help = False
                         self.settings = not self.settings
             # Wyświetlenie
             self.screen.blit(self.background_menu, (0, 0))
@@ -246,8 +260,12 @@ class Game:
                         # Jeśli naciśnięto strzałkę, wróć do menu głównego
                         self.main_menu()
                     if self.help_button.is_clicked():
+                        if self.settings:
+                            self.settings = False
                         self.help = not self.help
                     if self.settings_button.is_clicked():
+                        if self.help:
+                            self.help = False
                         self.settings = not self.settings
                     for i, button in enumerate(buttons):
                         if button.is_clicked():
@@ -265,6 +283,7 @@ class Game:
                 for button in buttons:
                     button.draw(self.screen)
 
+
             if self.help:
                 self.help_text.draw(self.screen)
             if self.settings:
@@ -278,57 +297,111 @@ class Game:
             self.clock.tick(60)
 
     # Metoda do wyświetlenia podsumowania po przejściu poziomu
+    #TODO: DO NAPRAWY, DZIAŁA ALE WYGLĄDA BRZYDKO
     def display_summary(self, ending_time):
-        # Przezroczyste czarne tło
-        background = pygame.Surface((self.screen.get_width(), self.screen.get_height()))
-        background.set_alpha(200)
-        background.fill((0, 0, 0))
-        self.screen.blit(background, (0, 0))
-
-        # Czcionka i rozmiar
         font = pygame.font.Font("data/fonts/font.ttf", 64)
         font_end = pygame.font.Font(None, 32)
 
-        # Utwórz tekst "You Win"
-        win_text = font.render("You Win", True, (255, 255, 255))
+        input_active = True
+        clock = pygame.time.Clock()
 
-        # Utwórz tekst dla czasu, total_jumps, username
-        time_text = font.render("Time: " + ending_time, True, (255, 255, 255))
-        jumps_text = font.render("Jumps: " + str(self.player.total_jumps), True, (255, 255, 255))
-        username_text = font.render("Enter your name", True, (255, 255, 255))
+        input_box = pygame.Rect((self.screen.get_width() / 2) - 200, (self.screen.get_height() / 2.5 + 250), 400, 64)
+        color_inactive = pygame.Color('lightskyblue3')
+        color_active = pygame.Color('dodgerblue2')
+        color = color_active
+        text = ''
+        user_name = ''
+        cursor_img = pygame.image.load("data/images/cursor1.png").convert_alpha()
 
-        # Wyświetl tekst na ekranie
-        self.screen.blit(win_text, ((self.screen.get_width() / 2) - 164, (self.screen.get_height() / 4.5) - 50))
-        self.screen.blit(time_text, ((self.screen.get_width() / 2) - 464, self.screen.get_height() / 3.5 + 50))
-        self.screen.blit(jumps_text, ((self.screen.get_width() / 2) + 100, self.screen.get_height() / 3.5 + 50))
-        self.screen.blit(username_text, ((self.screen.get_width() / 2) - 400, self.screen.get_height() / 3.5 + 200))
-        end1_text = font_end.render("Press enter to confirm, then", True, (255, 255, 255))
-        end2_text = font_end.render("Press space to leave to main menu", True, (255, 255, 255))
-        self.screen.blit(end1_text, ((self.screen.get_width() / 2) - 150, self.screen.get_height() / 3.5 + 420))
-        self.screen.blit(end2_text, ((self.screen.get_width() / 2) - 190, self.screen.get_height() / 3.5 + 470))
-
-        # Pobierz username
-        user_name = get_user_input(self.screen)
-
-        # Zapisywanie do xlsx używając funkcji z pliku utility
-        save_to_excel(user_name, ending_time, self.player.total_jumps, self.current_level)
-
-        # Pętla czekająca na naciśnięcie spacji
-        while True:
+        while input_active:
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
                     pygame.quit()
                     sys.exit()
+                if event.type == pygame.MOUSEBUTTONDOWN:
+                    if input_box.collidepoint(event.pos):
+                        color = color_active
+                    else:
+                        color = color_inactive
                 if event.type == pygame.KEYDOWN:
-                    # Jeśli naciśnięto spację, wyjdź z pętli
-                    if event.key == pygame.K_SPACE:
-                        self.main_menu()
-            # Aktualizuj ekran
+                    if event.key == pygame.K_RETURN:
+                        user_name = text.strip()
+                        if user_name != "":
+                            input_active = False
+                    elif event.key == pygame.K_BACKSPACE:
+                        text = text[:-1]
+                    else:
+                        if len(text) < 20:
+                            text += event.unicode
+
+            # Rysowanie tła
+            background = pygame.Surface((self.screen.get_width(), self.screen.get_height()), pygame.SRCALPHA)
+            background.fill((0, 0, 0, 200))
+            self.screen.blit(background, (0, 0))
+
+            # Teksty
+            win_text = font.render("You Win", True, (255, 255, 255))
+            time_text = font.render("Time: " + ending_time, True, (255, 255, 255))
+            jumps_text = font.render("Jumps: " + str(self.player.total_jumps), True, (255, 255, 255))
+            username_text = font.render("Enter your name", True, (255, 255, 255))
+            end1_text = font_end.render("Press enter to confirm, then", True, (255, 255, 255))
+            end2_text = font_end.render("Press space to leave to main menu", True, (255, 255, 255))
+
+            self.screen.blit(win_text, ((self.screen.get_width() / 2) - 164, (self.screen.get_height() / 4.5) - 50))
+            self.screen.blit(time_text, ((self.screen.get_width() / 2) - 464, self.screen.get_height() / 3.5 + 50))
+            self.screen.blit(jumps_text, ((self.screen.get_width() / 2) + 100, self.screen.get_height() / 3.5 + 50))
+            self.screen.blit(username_text, ((self.screen.get_width() / 2) - 400, self.screen.get_height() / 3.5 + 200))
+            self.screen.blit(end1_text, ((self.screen.get_width() / 2) - 150, self.screen.get_height() / 3.5 + 420))
+            self.screen.blit(end2_text, ((self.screen.get_width() / 2) - 190, self.screen.get_height() / 3.5 + 470))
+
+            # Input box
+            txt_surface = font.render(text, True, color)
+            width = max(400, txt_surface.get_width() + 10)
+            input_box.w = width
+            self.screen.blit(txt_surface, (input_box.x + 5, input_box.y + 5))
+            pygame.draw.rect(self.screen, color, input_box, 2)
+
+            # Kursor
             mouse_x, mouse_y = pygame.mouse.get_pos()
-            self.screen.blit(self.cursor_image, (mouse_x - self.cursor_offset[0], mouse_y - self.cursor_offset[1]))
-            pygame.display.update()
-            # Czekaj krótką chwilę przed następnym sprawdzeniem
-            pygame.time.wait(100)
+            self.screen.blit(cursor_img, (mouse_x - 30, mouse_y - 32))
+
+            pygame.display.flip()
+            clock.tick(60)
+
+        # Jeśli użytkownik coś wpisał, zapisz do pliku
+        if user_name != "":
+            save_to_excel(user_name, ending_time, self.player.total_jumps, self.current_level)
+
+        # Czekanie na spację
+        waiting = True
+        while waiting:
+            for event in pygame.event.get():
+                if event.type == pygame.QUIT:
+                    pygame.quit()
+                    sys.exit()
+                if event.type == pygame.KEYDOWN and event.key == pygame.K_SPACE:
+                    waiting = False
+
+            # Wyświetlanie tego samego tła i tekstów
+            self.screen.blit(background, (0, 0))
+            self.screen.blit(win_text, ((self.screen.get_width() / 2) - 164, (self.screen.get_height() / 4.5) - 50))
+            self.screen.blit(time_text, ((self.screen.get_width() / 2) - 464, self.screen.get_height() / 3.5 + 50))
+            self.screen.blit(jumps_text, ((self.screen.get_width() / 2) + 100, self.screen.get_height() / 3.5 + 50))
+            self.screen.blit(username_text, ((self.screen.get_width() / 2) - 400, self.screen.get_height() / 3.5 + 200))
+            self.screen.blit(end1_text, ((self.screen.get_width() / 2) - 150, self.screen.get_height() / 3.5 + 420))
+            self.screen.blit(end2_text, ((self.screen.get_width() / 2) - 190, self.screen.get_height() / 3.5 + 470))
+
+            txt_surface = font.render(user_name, True, color_active)
+            self.screen.blit(txt_surface, (input_box.x + 5, input_box.y + 5))
+            pygame.draw.rect(self.screen, color_active, input_box, 2)
+
+            mouse_x, mouse_y = pygame.mouse.get_pos()
+            self.screen.blit(cursor_img, (mouse_x - 30, mouse_y - 32))
+
+            pygame.display.flip()
+            clock.tick(60)
+
+        self.main_menu()
 
     # Metoda do uruchomienia gry
     def run(self, level=None):

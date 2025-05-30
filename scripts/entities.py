@@ -1,6 +1,6 @@
 import time
 import pygame
-
+from scripts.audio import Audio
 
 # Klasa do stworzenia entity
 class PhysicsEntity:
@@ -102,6 +102,18 @@ class Player(PhysicsEntity):
         self.total_jumps = 0
         self.jump_power = 0  # Dodaj atrybut do przechowywania siły skoku
         self.max_jump_power = 0.85  # Maksymalna siła skoku
+        self.footstep_index = 0
+        self.footstep_timer = 0
+        self.footstep_interval = 16 # np. liczba klatek między dźwiękami
+        self.audio = Audio(self)
+        self.footstep_sounds = [
+            self.audio.load_sound("data/audio/run_1.wav"),
+            self.audio.load_sound("data/audio/run_2.wav"),
+            self.audio.load_sound("data/audio/run_3.wav"),
+            self.audio.load_sound("data/audio/run_4.wav"),
+            self.audio.load_sound("data/audio/run_5.wav"),
+            self.audio.load_sound("data/audio/run_6.wav")
+        ]
 
     def reset_jump_power(self):
         self.jump_power = 0
@@ -162,6 +174,15 @@ class Player(PhysicsEntity):
         elif not self.jumping and movement[0] == 0:
             self.set_action("idle")
 
+        if self.action == "run":
+            self.footstep_timer += 1
+            if self.footstep_timer >= self.footstep_interval and self.air_time == 0:
+                self.audio.play_sound(self.footstep_sounds[self.footstep_index % len(self.footstep_sounds)], volume=0.2)
+                self.footstep_index += 1
+                self.footstep_timer = 0
+
+
+
         # Sprawdzanie jak długo gracz trzyma W i gdy czas dotrze do max automatycznie skacze
         if self.jumping:
             t_now = time.time()
@@ -175,6 +196,7 @@ class Player(PhysicsEntity):
     # Metoda do skoku
     def jump(self, power):
         if self.jumps == 1:
+            self.audio.play_sound("data/audio/jump.wav", volume=0.5)
             self.velocity[1] = -4.5 * power
             if self.last_movement == 0:
                 self.velocity[0] = 2
