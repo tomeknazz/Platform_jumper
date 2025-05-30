@@ -8,13 +8,13 @@ class Audio:
         self.sounds = {}
         self.music = None
 
-    def load_sound(self, name):
-        if name not in self.sounds:
-            self.sounds[name] = pygame.mixer.Sound(self.game.assets[name])
-        return self.sounds[name]
+    def load_sound(self, path):
+        if path not in self.sounds:
+            self.sounds[path] = pygame.mixer.Sound(path)
+        return self.sounds[path]
 
-    def play_sound(self, name, volume=1.0):
-        sound = self.load_sound(name)
+    def play_sound(self, path, volume=1.0):
+        sound = self.load_sound(path)
         sound.set_volume(volume)
         sound.play()
 

@@ -1,17 +1,13 @@
-import pygame
 import sys
 import time
-import ctypes
-import win32con
-import win32gui
-import win32api
-import os
 
-from scripts.utility import load_image, load_images, Animation, save_to_excel, get_user_input
+import pygame
+
+from scripts.audio import Audio
+from scripts.clouds import Clouds
 from scripts.entities import Player
 from scripts.tilemap import Tilemap
-from scripts.clouds import Clouds
-from scripts.audio import Audio
+from scripts.utility import load_image, load_images, Animation, save_to_excel, get_user_input
 
 RES_WIDTH = 1920
 RES_HEIGHT = 1080
@@ -36,7 +32,8 @@ class Button:
         self.highlight = highlight
         self.font = pygame.font.Font(font_path, font_size)
 
-    def _scale_image_pixel_art(self, image, target_w, target_h):
+    @staticmethod
+    def _scale_image_pixel_art(image, target_w, target_h):
         img_w, img_h = image.get_size()
         scale_x = target_w // img_w
         scale_y = target_h // img_h
@@ -77,13 +74,13 @@ class Game:
         pygame.init()
         # Podstawowe atrybuty dotyczące rozmiaru i tytułu okna, wraz z ograniczeniem fps
         pygame.display.set_caption("Platform Jumper")
-        #window icon
+        # window icon
         pygame.display.set_icon(pygame.image.load("data/images/g_icon.png"))
-        #taskbar icon
+        # taskbar icon
         pygame.mouse.set_visible(False)
 
         self.screen = pygame.display.set_mode((RES_WIDTH, RES_HEIGHT))
-        self.display = pygame.Surface((RES_WIDTH/2, RES_HEIGHT/2))
+        self.display = pygame.Surface((RES_WIDTH / 2, RES_HEIGHT / 2))
         self.cursor_image = pygame.image.load("data/images/cursor1.png").convert_alpha()
         self.cursor_offset = (30, 32)
         self.clock = pygame.time.Clock()
@@ -126,12 +123,23 @@ class Game:
         # Atrybut z czasem rozpoczęcia gry to późniejszego liczenia go i wyświetlania
         self.start_time = 0
         # Załadowanie tła menu i przeskalowanie go
-        self.background_menu = pygame.image.load("data/images/menu_bg2.jpg")
-        self.background_menu = pygame.transform.scale(self.background_menu, (RES_WIDTH, RES_HEIGHT))
+
+        self.background_menu = Button._scale_image_pixel_art(pygame.image.load("data/images/menu_bg2.jpg").convert(),
+                                                             RES_WIDTH, RES_HEIGHT)
         # Atrybut z obecnym poziomem
         self.current_level = None
         # Add audio instance
         self.audio = Audio(self)
+        # zmienne pomocnicze do setting i help
+        self.settings = False
+        self.help = False
+        # Stworzenie przycisków
+        self.help_button = Button('', RES_WIDTH * 0.01, RES_HEIGHT * 0.85, 100, 125, "data/images/help.png")
+        self.settings_button = Button('', RES_WIDTH * 0.93, RES_HEIGHT * 0.01, 125, 125, "data/images/settings.png")
+        self.help_text = Button('Tutaj będzie Help', RES_WIDTH / 2 + 50, RES_HEIGHT / 2 - 50 + 10, 100, 125,
+                           "data/images/transparent.png")
+        self.settings_text = Button('Tutaj będzie Settings', RES_WIDTH / 2 + 50, RES_HEIGHT / 2 - 50 + 10, 100, 125,
+                               "data/images/transparent.png")
 
     # Metoda do resetowania atrybutów przed kolejnym rozpoczęciem rozgrywki
     def reset(self):
@@ -149,17 +157,25 @@ class Game:
     # Metoda tworząca i wyświetlająca main menu
     def main_menu(self):
         # Stworzenie przycisków "Play" i "Exit" używając klasy Button
-        authors_button = Button('Tomasz Nazar', RES_WIDTH*0.75, RES_HEIGHT*0.7-20, 350, 300, "data/images/banner_left.png",font_size=19,highlight=False,offset_x=25, offset_y=20)
-        author_1 = Button('Filip Pietrzak', RES_WIDTH*0.75+10, RES_HEIGHT*0.7+25, 350, 300, "data/images/transparent.png",font_size=17,highlight=False,offset_x=25, offset_y=20)
-        pole = Button('',RES_WIDTH*0.75, RES_HEIGHT*0.8-50, 400, 300, "data/images/pole.png", font_size=18, offset_y=20, highlight=False)
-        title_button = Button('Platform Jumper', RES_WIDTH/2-470, RES_HEIGHT/2-400, 940, 350, "data/images/banner_title.png",font_size=45, offset_y=-10,highlight=False)
-        play_button = Button('Play', RES_WIDTH/2-180, RES_HEIGHT/2-60, 360, 150, "data/images/banner_scroll_wide.png")
-        exit_button = Button('Exit', RES_WIDTH/2-180, RES_HEIGHT/2+90, 360, 150, "data/images/banner_scroll_wide.png")
-        help_button = Button('', RES_WIDTH * 0.01, RES_HEIGHT * 0.85, 100, 125, "data/images/help.png")
-        settings_button = Button('', RES_WIDTH*0.93, RES_HEIGHT * 0.01, 125, 125, "data/images/settings.png")
+        authors_button = Button('Tomasz Nazar', RES_WIDTH * 0.75, RES_HEIGHT * 0.7 - 20, 350, 300,
+                                "data/images/banner_left.png", font_size=19, highlight=False, offset_x=25, offset_y=20)
+        author_1 = Button('Filip Pietrzak', RES_WIDTH * 0.75 + 10, RES_HEIGHT * 0.7 + 25, 350, 300,
+                          "data/images/transparent.png", font_size=17, highlight=False, offset_x=25, offset_y=20)
+        pole = Button('', RES_WIDTH * 0.75, RES_HEIGHT * 0.8 - 50, 400, 300, "data/images/pole.png", font_size=18,
+                      offset_y=20, highlight=False)
+        title_button = Button('Platform Jumper', RES_WIDTH / 2 - 470, RES_HEIGHT / 2 - 400, 940, 350,
+                              "data/images/banner_title.png", font_size=45, offset_y=-10, highlight=False)
+        play_button = Button('Play', RES_WIDTH / 2 - 180, RES_HEIGHT / 2 - 60, 360, 150,
+                             "data/images/banner_scroll_wide.png")
+        exit_button = Button('Exit', RES_WIDTH / 2 - 180, RES_HEIGHT / 2 + 90, 360, 150,
+                             "data/images/banner_scroll_wide.png")
+        #TODO: WYNIEŚĆ DO INIT
+
+
+
 
         # Play menu music once at menu entry
-        self.audio.play_music('data/audio/menu_music.mp3', volume=0.20)
+        self.audio.play_music('data/audio/menu_music.mp3', volume=0.25)
         # Głowna pętla menu czekająca na eventy od gracza
         while True:
             self.reset()
@@ -170,22 +186,36 @@ class Game:
 
                 if event.type == pygame.MOUSEBUTTONDOWN:
                     # Wykorzystanie metody z klasy button (.is_clicked), by wiedzieć, czy kursor jest nad guzikiem
+                    self.audio.play_sound("data/audio/click.wav")
+                    if not (self.settings_button.is_clicked() or self.help_button.is_clicked()):
+                        self.help = False
+                        self.settings = False
                     if play_button.is_clicked():
+                        pygame.mixer.stop()
+                        self.audio.play_sound("data/audio/selected_button.wav")
                         self.level_picker()
                     elif exit_button.is_clicked():
                         pygame.quit()
                         sys.exit()
+                    if self.help_button.is_clicked():
+                        self.help = not self.help
+                    if self.settings_button.is_clicked():
+                        self.settings = not self.settings
             # Wyświetlenie
             self.screen.blit(self.background_menu, (0, 0))
-            title_button.draw(self.screen)
             pole.draw(self.screen)
             authors_button.draw(self.screen)
             author_1.draw(self.screen)
-
-            play_button.draw(self.screen)
-            exit_button.draw(self.screen)
-            help_button.draw(self.screen)
-            settings_button.draw(self.screen)
+            if not (self.settings or self.help):
+                title_button.draw(self.screen)
+                play_button.draw(self.screen)
+                exit_button.draw(self.screen)
+            if self.help:
+                self.help_text.draw(self.screen)
+            if self.settings:
+                self.settings_text.draw(self.screen)
+            self.help_button.draw(self.screen)
+            self.settings_button.draw(self.screen)
             mouse_x, mouse_y = pygame.mouse.get_pos()
             self.screen.blit(self.cursor_image, (mouse_x - self.cursor_offset[0], mouse_y - self.cursor_offset[1]))
             pygame.display.update()
@@ -197,12 +227,13 @@ class Game:
         levels = ['Galactic Tower', 'Winter Wilds', 'Corrupted Fields']
 
         # Stworzenie przycisków
-        #return_button = Button('', RES_WIDTH/2-180, RES_HEIGHT/2+400, 360, 150, "data/images/banner_left.png")
-        arrow = Button('', RES_WIDTH*0.01, RES_HEIGHT*0.02, 125, 125, "data/images/arrow.png", flip_x=True)
-        select_level_button = Button('Select Level', RES_WIDTH/2-470, RES_HEIGHT/2-400, 940, 350, "data/images/banner_title.png",font_size=45,offset_y=-10,highlight=False)
-        help_button = Button('', RES_WIDTH * 0.01, RES_HEIGHT * 0.85, 100, 125, "data/images/help.png")
-        settings_button = Button('', RES_WIDTH * 0.93, RES_HEIGHT * 0.01, 125, 125, "data/images/settings.png")
-        buttons = [Button(level, RES_WIDTH/2-265, RES_HEIGHT/2-50 + i * 120, 530, 110, "data/images/banner_scroll_wide_thin.png",0,0,font_size=25) for i, level in enumerate(levels)]
+        # return_button = Button('', RES_WIDTH/2-180, RES_HEIGHT/2+400, 360, 150, "data/images/banner_left.png")
+        arrow = Button('', RES_WIDTH * 0.01, RES_HEIGHT * 0.02, 125, 125, "data/images/arrow.png", flip_x=True)
+        select_level_button = Button('Select Level', RES_WIDTH / 2 - 470, RES_HEIGHT / 2 - 400, 940, 350,
+                                     "data/images/banner_title.png", font_size=45, offset_y=-10, highlight=False)
+        buttons = [Button(level, RES_WIDTH / 2 - 265, RES_HEIGHT / 2 - 50 + i * 120, 530, 110,
+                          "data/images/banner_scroll_wide_thin.png", 0, 0, font_size=25) for i, level in
+                   enumerate(levels)]
         # Główna pętla level_picker'a
         while True:
             for event in pygame.event.get():
@@ -211,22 +242,40 @@ class Game:
                     sys.exit()
 
                 if event.type == pygame.MOUSEBUTTONDOWN:
+                    self.audio.play_sound("data/audio/click.wav")
+                    if not (self.settings_button.is_clicked() or self.help_button.is_clicked()):
+                        self.help = False
+                        self.settings = False
                     if arrow.is_clicked():
                         # Jeśli naciśnięto strzałkę, wróć do menu głównego
                         self.main_menu()
+                    if self.help_button.is_clicked():
+                        self.help = not self.help
+                    if self.settings_button.is_clicked():
+                        self.settings = not self.settings
                     for i, button in enumerate(buttons):
                         if button.is_clicked():
+                            pygame.mixer.stop()
+                            self.audio.play_sound("data/audio/selected_button.wav")
                             self.current_level = str(levels[i])
                             self.run(levels[i])
             # Wyświetlenie
             self.screen.blit(self.background_menu, (0, 0))
-            select_level_button.draw(self.screen)
-            #return_button.draw(self.screen)
+
+            # return_button.draw(self.screen)
             arrow.draw(self.screen)
-            help_button.draw(self.screen)
-            settings_button.draw(self.screen)
-            for button in buttons:
-                button.draw(self.screen)
+            if not (self.settings or self.help):
+                select_level_button.draw(self.screen)
+                for button in buttons:
+                    button.draw(self.screen)
+
+            if self.help:
+                self.help_text.draw(self.screen)
+            if self.settings:
+                self.settings_text.draw(self.screen)
+            self.help_button.draw(self.screen)
+            self.settings_button.draw(self.screen)
+
             mouse_x, mouse_y = pygame.mouse.get_pos()
             self.screen.blit(self.cursor_image, (mouse_x - self.cursor_offset[0], mouse_y - self.cursor_offset[1]))
             pygame.display.update()
@@ -301,8 +350,10 @@ class Game:
                 pygame.display.update()
             else:
                 # Tlo dynamiczne
-                #self.display.blit(self.assets[self.current_level], (0, 0))
-                self.display.blit(pygame.transform.scale(self.assets[self.current_level], (self.display.get_width(), self.display.get_height())), (0, 0))
+                # self.display.blit(self.assets[self.current_level], (0, 0))
+                # self.display.blit(scale_image_pixel_art(self.assets[self.current_level].convert(), RES_WIDTH, RES_HEIGHT), (0, 0))
+                self.display.blit(pygame.transform.scale(self.assets[self.current_level],
+                                                         (self.display.get_width(), self.display.get_height())), (0, 0))
                 # Przesuwanie "kamery" za graczem
                 self.scroll[0] += (self.player.rect().centerx - self.display.get_width() / 2 - self.scroll[0]) / 30
                 self.scroll[1] += (self.player.rect().centery - self.display.get_height() / 2 - self.scroll[1]) / 30
@@ -324,7 +375,6 @@ class Game:
                 self.player.render(self.display, offset=render_scroll)
 
                 self.tilemap.render_offset(self.display, offset=render_scroll)
-
 
                 # Timer
                 elapsed_time = (pygame.time.get_ticks() - self.start_time) / 1000
@@ -351,7 +401,7 @@ class Game:
                     pygame.draw.rect(self.display, (128, 128, 128),
                                      (bar_x + filled_width, bar_y, 100 - filled_width, bar_height))
                     # Draw the border of the bar (black) optionally
-                    #pygame.draw.rect(self.display, (0, 0, 0), (bar_x, bar_y, 100, bar_height), 2)
+                    # pygame.draw.rect(self.display, (0, 0, 0), (bar_x, bar_y, 100, bar_height), 2)
 
                 # Event handler
                 for event in pygame.event.get():
