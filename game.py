@@ -169,10 +169,6 @@ class Game:
                              "data/images/banner_scroll_wide.png")
         exit_button = Button('Exit', RES_WIDTH / 2 - 180, RES_HEIGHT / 2 + 90, 360, 150,
                              "data/images/banner_scroll_wide.png")
-        #TODO: WYNIEŚĆ DO INIT
-
-
-
 
         # Play menu music once at menu entry
         self.audio.play_music('data/audio/menu_music.mp3', volume=0.25)
