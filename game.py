@@ -155,8 +155,8 @@ class Game:
     def reset(self):
         self.movement = [False, False]
         # Win pos
-        self.player_startpos = (100, -1700)
-        # self.player_startpos = (1, 200)
+        # self.player_startpos = (100, -1700)
+        self.player_startpos = (1, 200)
         self.player = Player(self, self.player_startpos, (16, 28))
         self.scroll = [0, 0]
         self.start_time = pygame.time.get_ticks()
