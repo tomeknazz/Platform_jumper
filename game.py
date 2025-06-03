@@ -18,6 +18,7 @@ class Button:
     def __init__(self, text, x, y, width, height, image_path, offset_x=0, offset_y=0,
                  font_path="data/fonts/font1.ttf", font_size=50,
                  flip_x=False, flip_y=False, highlight=True):
+
         self.text = text
         self.rect = pygame.Rect(x, y, width, height)
         self.offset = (offset_x, offset_y)
@@ -51,12 +52,14 @@ class Button:
         new_size = (img_w * scale, img_h * scale)
         return pygame.transform.scale(image, new_size)
 
-    def draw(self, screen):
+    def draw(self, screen, mouse_pos=None):
+        if mouse_pos is None:
+            mouse_pos = pygame.mouse.get_pos()
         image_rect = self.image.get_rect(center=self.rect.center)
         image_rect.x += self.offset[0]
         image_rect.y += self.offset[1]
 
-        if self.rect.collidepoint(pygame.mouse.get_pos()) and self.highlight:
+        if self.rect.collidepoint(mouse_pos) and self.highlight:
             screen.blit(self.hover_image, image_rect)
         else:
             screen.blit(self.image, image_rect)
@@ -65,8 +68,18 @@ class Button:
         text_rect = text_surface.get_rect(center=self.rect.center)
         screen.blit(text_surface, text_rect)
 
-    def is_clicked(self):
-        return self.rect.collidepoint(pygame.mouse.get_pos())
+    def is_clicked(self, mouse_pos=None):
+        if mouse_pos is None:
+            mouse_pos = pygame.mouse.get_pos()
+        return self.rect.collidepoint(mouse_pos)
+
+    @staticmethod
+    def get_scaled_mouse_pos(self, screen, display):
+        mouse_x, mouse_y = pygame.mouse.get_pos()
+        scale_x = display.get_width() / screen.get_width()
+        scale_y = display.get_height() / screen.get_height()
+        return int(mouse_x * scale_x), int(mouse_y * scale_y)
+
 
 def clean_transparent_pixels(surface, replace_with=(0, 0, 0, 0)):
     width, height = surface.get_size()
@@ -77,6 +90,7 @@ def clean_transparent_pixels(surface, replace_with=(0, 0, 0, 0)):
                 # Ustaw przezroczyste piksele na neutralny kolor (np. brąz z alhpa 0)
                 surface.set_at((x, y), replace_with)
     return surface
+
 
 # Główna klasa gry
 class Game:
@@ -147,9 +161,9 @@ class Game:
         self.help_button = Button('', RES_WIDTH * 0.01, RES_HEIGHT * 0.85, 100, 125, "data/images/help.png")
         self.settings_button = Button('', RES_WIDTH * 0.93, RES_HEIGHT * 0.01, 125, 125, "data/images/settings.png")
         self.help_text = Button('Tutaj będzie Help', RES_WIDTH / 2 - 450, RES_HEIGHT / 2 - 125 + 10, 1000, 250,
-                           "data/images/banner_scroll_wide_thin.png",highlight=False)
+                                "data/images/banner_scroll_wide_thin.png", highlight=False)
         self.settings_text = Button('Tutaj będzie Settings', RES_WIDTH / 2 - 450, RES_HEIGHT / 2 - 125 + 10, 1000, 250,
-                               "data/images/banner_scroll_wide_thin.png",highlight=False)
+                                    "data/images/banner_scroll_wide_thin.png", highlight=False)
 
     # Metoda do resetowania atrybutów przed kolejnym rozpoczęciem rozgrywki
     def reset(self):
@@ -212,6 +226,7 @@ class Game:
                             self.help = False
                         self.settings = not self.settings
             # Wyświetlenie
+
             self.screen.blit(self.background_menu, (0, 0))
             pole.draw(self.screen)
             authors_button.draw(self.screen)
@@ -267,6 +282,7 @@ class Game:
                         if self.help:
                             self.help = False
                         self.settings = not self.settings
+
                     for i, button in enumerate(buttons):
                         if button.is_clicked():
                             pygame.mixer.stop()
@@ -282,7 +298,6 @@ class Game:
                 select_level_button.draw(self.screen)
                 for button in buttons:
                     button.draw(self.screen)
-
 
             if self.help:
                 self.help_text.draw(self.screen)
@@ -406,78 +421,51 @@ class Game:
     # Metoda do uruchomienia gry
     def run(self, level=None):
         # Sprawdza jaki level załadować
+        gamePaused = False
+        pygame.mouse.set_visible(False)
+        # Wymiary przycisków jako % ekranu
+        banner_w = RES_WIDTH * 0.3
+        banner_h = RES_HEIGHT * 0.075
+        button_w = RES_WIDTH * 0.2
+        button_h = RES_HEIGHT * 0.06
+        x_center = RES_WIDTH / 4 - button_w / 2
+
+        # Skalowanie rozmiaru czcionki proporcjonalnie do wysokości ekranu
+        font_size = int(RES_HEIGHT * 0.025)
+        banner_font_size = int(RES_HEIGHT * 0.035)
+
+        # Pozycje przycisków (pionowo)
+        spacing = RES_HEIGHT * 0.075
+        y_start = RES_HEIGHT * 0.075
+        self.resume_button = Button('Resume', x_center, y_start + spacing * 1, button_w, button_h,
+                                    "data/images/banner_scroll_wide_thin.png", font_size=font_size, highlight=True)
+        self.restart_button = Button('Restart', x_center, y_start + spacing * 2, button_w, button_h,
+                                      "data/images/banner_scroll_wide_thin.png", font_size=font_size, highlight=True)
+        self.menu_button = Button('Main menu', x_center, y_start + spacing * 3, button_w, button_h,
+                                     "data/images/banner_scroll_wide_thin.png", font_size=font_size - 2, highlight=True)
+        self.quit_button = Button('Quit', x_center, y_start + spacing * 4, button_w, button_h,
+                                  "data/images/banner_scroll_wide_thin.png", font_size=font_size, highlight=True)
+        # Przycisk PAUSED jako banner (bez akcji, tylko wizualnie)
+        self.paused_banner = Button('PAUSED', RES_WIDTH / 4 - banner_w / 2, RES_HEIGHT * 0.0375, banner_w, banner_h,
+                                    "data/images/banner_scroll_wide_thin.png", font_size=banner_font_size,
+                                    highlight=False)
+
         if level is not None:
             self.tilemap.load("data/map/" + str(level) + ".json")
             self.start_time = pygame.time.get_ticks()
 
         # Główna pętla gry
         while True:
-            # Sprawdzenie, czy gracz wygrał
-            if self.player.win:
-                self.display_summary(time_str)
-                elapsed_time = 0
-                pygame.display.update()
-            else:
-                # Tlo dynamiczne
-                # self.display.blit(self.assets[self.current_level], (0, 0))
-                # self.display.blit(scale_image_pixel_art(self.assets[self.current_level].convert(), RES_WIDTH, RES_HEIGHT), (0, 0))
-                self.display.blit(pygame.transform.scale(self.assets[self.current_level],
-                                                         (self.display.get_width(), self.display.get_height())), (0, 0))
-                # Przesuwanie "kamery" za graczem
-                self.scroll[0] += (self.player.rect().centerx - self.display.get_width() / 2 - self.scroll[0]) / 30
-                self.scroll[1] += (self.player.rect().centery - self.display.get_height() / 2 - self.scroll[1]) / 30
-                render_scroll = (int(self.scroll[0]), int(self.scroll[1]))
+            # Event handler
+            for event in pygame.event.get():
+                if event.type == pygame.QUIT:
+                    pygame.quit()
+                    sys.exit()
+                elif event.type == pygame.KEYDOWN:
+                    if event.key == pygame.K_ESCAPE:
+                        gamePaused = not gamePaused  # przełączanie pauzy
 
-                # Chmury
-                if level == "Winter Wilds" or level == "Corrupted Fields":
-                    self.clouds.update()
-                    self.clouds.render(self.display, offset=render_scroll)
-
-                # Klocki
-                self.tilemap.render(self.display, offset=render_scroll)
-
-                # Update gracza (pozycja, animacja itd.)
-                # True = 1 False = 0 dzięki temu można kontrolować ruch (czy w prawo, czy w lewo)
-                self.player.update(self.tilemap, (self.movement[1] - self.movement[0], 0))
-
-                # Render gracza
-                self.player.render(self.display, offset=render_scroll)
-
-                self.tilemap.render_offset(self.display, offset=render_scroll)
-
-                # Timer
-                elapsed_time = (pygame.time.get_ticks() - self.start_time) / 1000
-                minutes = int(elapsed_time / 60)
-                seconds = int(elapsed_time % 60)
-                time_str = f"{minutes:02}:{seconds:02}"
-                time_font = pygame.font.Font(None, 60)
-                time_text = time_font.render(time_str, True, (255, 255, 255))
-
-                if self.player.jumping:
-                    jump_duration = time.time() - self.player.jump_start_time
-                    self.player.jump_power = min(jump_duration, self.player.max_jump_power)
-
-                # Rysowanie paska siły skoku
-                if self.player.jumping:
-                    filled_width = int(100 * (self.player.jump_power / self.player.max_jump_power))
-                    bar_height = 5
-                    bar_x = self.player.rect().centerx - render_scroll[0] - 50  # Adjust for camera scroll
-                    bar_y = self.player.rect().top - render_scroll[1] - 20  # Adjust for camera scroll
-
-                    # Draw the filled portion of the bar (orange)
-                    pygame.draw.rect(self.display, (255, 165, 0), (bar_x, bar_y, filled_width, bar_height))
-                    # Draw the remaining portion of the bar (gray)
-                    pygame.draw.rect(self.display, (128, 128, 128),
-                                     (bar_x + filled_width, bar_y, 100 - filled_width, bar_height))
-                    # Draw the border of the bar (black) optionally
-                    # pygame.draw.rect(self.display, (0, 0, 0), (bar_x, bar_y, 100, bar_height), 2)
-
-                # Event handler
-                for event in pygame.event.get():
-                    if event.type == pygame.QUIT:
-                        pygame.quit()
-                        sys.exit()
-                    if event.type == pygame.KEYDOWN:
+                    if not gamePaused:
                         self.player.last_movement = 2
                         # Jeśli w to skok
                         if event.key == pygame.K_w:
@@ -498,21 +486,118 @@ class Game:
                             if event.key == pygame.K_d:
                                 self.player.last_movement = 0
 
-                    if event.type == pygame.KEYUP:
-                        if event.key == pygame.K_a:
-                            self.movement[0] = False
-                        if event.key == pygame.K_d:
-                            self.movement[1] = False
-                        if event.key == pygame.K_w:
-                            self.player.jumping = False
-                            jump_duration = time.time() - self.player.jump_start_time
-                            self.player.jump_power = min(jump_duration, self.player.max_jump_power)
-                            self.player.jump(self.player.jump_power)
-                            self.player.reset_jump_power()
+                elif event.type == pygame.KEYUP and not gamePaused:
+                    if event.key == pygame.K_a:
+                        self.movement[0] = False
+                    if event.key == pygame.K_d:
+                        self.movement[1] = False
+                    if event.key == pygame.K_w:
+                        self.player.jumping = False
+                        jump_duration = time.time() - self.player.jump_start_time
+                        self.player.jump_power = min(jump_duration, self.player.max_jump_power)
+                        self.player.jump(self.player.jump_power)
+                        self.player.reset_jump_power()
+
+                elif event.type == pygame.MOUSEBUTTONDOWN and gamePaused:
+                    mouse_pos = Button.get_scaled_mouse_pos(self, self.screen, self.display)
+                    self.audio.play_sound("data/audio/click.wav")
+                    if self.resume_button.is_clicked(mouse_pos=mouse_pos):
+                        gamePaused = False
+                    elif self.menu_button.is_clicked(mouse_pos=mouse_pos):
+                        self.main_menu()
+                    elif self.restart_button.is_clicked(mouse_pos=mouse_pos):
+                        del self.player
+                        self.player = Player(self, self.player_startpos, (16, 28))
+                        self.run(level)
+                    elif self.quit_button.is_clicked(mouse_pos=mouse_pos):
+                        pygame.quit()
+                        sys.exit()
+
+            # Sprawdzenie, czy gracz wygrał
+            if self.player.win:
+                self.display_summary(time_str)
+                elapsed_time = 0
+                pygame.display.update()
+            else:
+                # Tlo dynamiczne
+                self.display.blit(pygame.transform.scale(self.assets[self.current_level],
+                                                         (self.display.get_width(), self.display.get_height())), (0, 0))
+
+                if not gamePaused:
+                    # Przesuwanie "kamery" za graczem
+                    self.scroll[0] += (self.player.rect().centerx - self.display.get_width() / 2 - self.scroll[0]) / 30
+                    self.scroll[1] += (self.player.rect().centery - self.display.get_height() / 2 - self.scroll[1]) / 30
+                    render_scroll = (int(self.scroll[0]), int(self.scroll[1]))
+
+                    # Chmury
+                    if level == "Winter Wilds" or level == "Corrupted Fields":
+                        self.clouds.update()
+                        self.clouds.render(self.display, offset=render_scroll)
+
+                    # Klocki
+                    self.tilemap.render(self.display, offset=render_scroll)
+
+                    # Update gracza (pozycja, animacja itd.)
+                    self.player.update(self.tilemap, (self.movement[1] - self.movement[0], 0))
+
+                    # Render gracza
+                    self.player.render(self.display, offset=render_scroll)
+
+                    self.tilemap.render_offset(self.display, offset=render_scroll)
+
+                    # Timer
+                    elapsed_time = (pygame.time.get_ticks() - self.start_time) / 1000
+                    minutes = int(elapsed_time / 60)
+                    seconds = int(elapsed_time % 60)
+                    time_str = f"{minutes:02}:{seconds:02}"
+                    time_font = pygame.font.Font(None, 60)
+                    time_text = time_font.render(time_str, True, (255, 255, 255))
+
+                    render_scroll = (int(self.scroll[0]), int(self.scroll[1]))
+
+                    # Rysowanie paska siły skoku
+                    if self.player.jumping:
+                        # Tymczasowo obliczamy aktualną moc ładowania
+                        jump_duration = time.time() - self.player.jump_start_time
+                        temp_power = min(jump_duration, self.player.max_jump_power)
+                        filled_width = int(100 * (temp_power / self.player.max_jump_power))
+
+                        bar_height = 5
+                        bar_x = self.player.rect().centerx - render_scroll[0] - 50  # Adjust for camera scroll
+                        bar_y = self.player.rect().top - render_scroll[1] - 20  # Adjust for camera scroll
+
+                        # Gradient od zielonego (na początku) do czerwonego (na końcu)
+                        ratio = temp_power / self.player.max_jump_power
+                        red = int(255 * ratio)
+                        green = int(255 * (1 - ratio))
+                        color = (red, green, 0)
+
+                        pygame.draw.rect(self.display, color, (bar_x, bar_y, filled_width, bar_height))
+                        pygame.draw.rect(self.display, (128, 128, 128),
+                                         (bar_x + filled_width, bar_y, 100 - filled_width, bar_height))
+
+                # Pauza
+                if gamePaused:
+                    mouse_pos = Button.get_scaled_mouse_pos(self, self.screen, self.display)
+                    # 4 przyciski menu pauzy
+                    # TODO: Naprawić by guziki działały
+
+                    # Rysuj przyciski
+                    self.paused_banner.draw(self.display)
+                    self.resume_button.draw(self.display, mouse_pos=mouse_pos)
+                    self.menu_button.draw(self.display, mouse_pos=mouse_pos)
+                    self.restart_button.draw(self.display, mouse_pos=mouse_pos)
+                    self.quit_button.draw(self.display, mouse_pos=mouse_pos)
+
                 # Wyświetlenie wszystkiego na ekran
                 self.screen.blit(pygame.transform.scale(self.display, self.screen.get_size()), (0, 0))
 
-                self.screen.blit(time_text, (10, 10))
+                if gamePaused:
+                    mouse_x, mouse_y = pygame.mouse.get_pos()
+                    self.screen.blit(self.cursor_image, (mouse_x - 30, mouse_y - 32))
+
+                if not gamePaused:
+                    self.screen.blit(time_text, (10, 10))
                 pygame.display.update()
                 self.clock.tick(60)  # ograniczenie do 60fps
 
