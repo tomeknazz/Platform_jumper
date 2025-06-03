@@ -9,8 +9,8 @@ from scripts.entities import Player
 from scripts.tilemap import Tilemap
 from scripts.utility import load_image, load_images, Animation, save_to_excel
 
-RES_WIDTH = 1280
-RES_HEIGHT = 720
+RES_WIDTH = 1920
+RES_HEIGHT = 1080
 
 
 # Klasa do Tworzenia przycisków
@@ -52,12 +52,14 @@ class Button:
         new_size = (img_w * scale, img_h * scale)
         return pygame.transform.scale(image, new_size)
 
-    def draw(self, screen):
+    def draw(self, screen, mouse_pos=None):
+        if mouse_pos is None:
+            mouse_pos = pygame.mouse.get_pos()
         image_rect = self.image.get_rect(center=self.rect.center)
         image_rect.x += self.offset[0]
         image_rect.y += self.offset[1]
 
-        if self.rect.collidepoint(pygame.mouse.get_pos()) and self.highlight:
+        if self.rect.collidepoint(mouse_pos) and self.highlight:
             screen.blit(self.hover_image, image_rect)
         else:
             screen.blit(self.image, image_rect)
@@ -66,8 +68,18 @@ class Button:
         text_rect = text_surface.get_rect(center=self.rect.center)
         screen.blit(text_surface, text_rect)
 
-    def is_clicked(self):
-        return self.rect.collidepoint(pygame.mouse.get_pos())
+    def is_clicked(self, mouse_pos=None):
+        if mouse_pos is None:
+            mouse_pos = pygame.mouse.get_pos()
+        return self.rect.collidepoint(mouse_pos)
+
+    @staticmethod
+    def get_scaled_mouse_pos(self, screen, display):
+        mouse_x, mouse_y = pygame.mouse.get_pos()
+        scale_x = display.get_width() / screen.get_width()
+        scale_y = display.get_height() / screen.get_height()
+        return int(mouse_x * scale_x), int(mouse_y * scale_y)
+
 
 def clean_transparent_pixels(surface, replace_with=(0, 0, 0, 0)):
     width, height = surface.get_size()
@@ -78,6 +90,7 @@ def clean_transparent_pixels(surface, replace_with=(0, 0, 0, 0)):
                 # Ustaw przezroczyste piksele na neutralny kolor (np. brąz z alhpa 0)
                 surface.set_at((x, y), replace_with)
     return surface
+
 
 # Główna klasa gry
 class Game:
@@ -148,9 +161,9 @@ class Game:
         self.help_button = Button('', RES_WIDTH * 0.01, RES_HEIGHT * 0.85, 100, 125, "data/images/help.png")
         self.settings_button = Button('', RES_WIDTH * 0.93, RES_HEIGHT * 0.01, 125, 125, "data/images/settings.png")
         self.help_text = Button('Tutaj będzie Help', RES_WIDTH / 2 - 450, RES_HEIGHT / 2 - 125 + 10, 1000, 250,
-                           "data/images/banner_scroll_wide_thin.png",highlight=False)
+                                "data/images/banner_scroll_wide_thin.png", highlight=False)
         self.settings_text = Button('Tutaj będzie Settings', RES_WIDTH / 2 - 450, RES_HEIGHT / 2 - 125 + 10, 1000, 250,
-                               "data/images/banner_scroll_wide_thin.png",highlight=False)
+                                    "data/images/banner_scroll_wide_thin.png", highlight=False)
 
     # Metoda do resetowania atrybutów przed kolejnym rozpoczęciem rozgrywki
     def reset(self):
@@ -213,6 +226,7 @@ class Game:
                             self.help = False
                         self.settings = not self.settings
             # Wyświetlenie
+
             self.screen.blit(self.background_menu, (0, 0))
             pole.draw(self.screen)
             authors_button.draw(self.screen)
@@ -284,7 +298,6 @@ class Game:
                 select_level_button.draw(self.screen)
                 for button in buttons:
                     button.draw(self.screen)
-
 
             if self.help:
                 self.help_text.draw(self.screen)
@@ -410,6 +423,32 @@ class Game:
         # Sprawdza jaki level załadować
         gamePaused = False
         pygame.mouse.set_visible(False)
+        # Wymiary przycisków jako % ekranu
+        banner_w = RES_WIDTH * 0.3
+        banner_h = RES_HEIGHT * 0.075
+        button_w = RES_WIDTH * 0.2
+        button_h = RES_HEIGHT * 0.06
+        x_center = RES_WIDTH / 4 - button_w / 2
+
+        # Skalowanie rozmiaru czcionki proporcjonalnie do wysokości ekranu
+        font_size = int(RES_HEIGHT * 0.025)
+        banner_font_size = int(RES_HEIGHT * 0.035)
+
+        # Pozycje przycisków (pionowo)
+        spacing = RES_HEIGHT * 0.075
+        y_start = RES_HEIGHT * 0.075
+        self.resume_button = Button('Resume', x_center, y_start + spacing * 1, button_w, button_h,
+                                    "data/images/banner_scroll_wide_thin.png", font_size=font_size, highlight=True)
+        self.restart_button = Button('Restart', x_center, y_start + spacing * 2, button_w, button_h,
+                                      "data/images/banner_scroll_wide_thin.png", font_size=font_size, highlight=True)
+        self.menu_button = Button('Main menu', x_center, y_start + spacing * 3, button_w, button_h,
+                                     "data/images/banner_scroll_wide_thin.png", font_size=font_size - 2, highlight=True)
+        self.quit_button = Button('Quit', x_center, y_start + spacing * 4, button_w, button_h,
+                                  "data/images/banner_scroll_wide_thin.png", font_size=font_size, highlight=True)
+        # Przycisk PAUSED jako banner (bez akcji, tylko wizualnie)
+        self.paused_banner = Button('PAUSED', RES_WIDTH / 4 - banner_w / 2, RES_HEIGHT * 0.0375, banner_w, banner_h,
+                                    "data/images/banner_scroll_wide_thin.png", font_size=banner_font_size,
+                                    highlight=False)
 
         if level is not None:
             self.tilemap.load("data/map/" + str(level) + ".json")
@@ -422,10 +461,9 @@ class Game:
                 if event.type == pygame.QUIT:
                     pygame.quit()
                     sys.exit()
-                if event.type == pygame.KEYDOWN:
+                elif event.type == pygame.KEYDOWN:
                     if event.key == pygame.K_ESCAPE:
                         gamePaused = not gamePaused  # przełączanie pauzy
-                        pygame.mouse.set_visible(gamePaused)
 
                     if not gamePaused:
                         self.player.last_movement = 2
@@ -448,7 +486,7 @@ class Game:
                             if event.key == pygame.K_d:
                                 self.player.last_movement = 0
 
-                if event.type == pygame.KEYUP and not gamePaused:
+                elif event.type == pygame.KEYUP and not gamePaused:
                     if event.key == pygame.K_a:
                         self.movement[0] = False
                     if event.key == pygame.K_d:
@@ -459,6 +497,21 @@ class Game:
                         self.player.jump_power = min(jump_duration, self.player.max_jump_power)
                         self.player.jump(self.player.jump_power)
                         self.player.reset_jump_power()
+
+                elif event.type == pygame.MOUSEBUTTONDOWN and gamePaused:
+                    mouse_pos = Button.get_scaled_mouse_pos(self, self.screen, self.display)
+                    self.audio.play_sound("data/audio/click.wav")
+                    if self.resume_button.is_clicked(mouse_pos=mouse_pos):
+                        gamePaused = False
+                    elif self.menu_button.is_clicked(mouse_pos=mouse_pos):
+                        self.main_menu()
+                    elif self.restart_button.is_clicked(mouse_pos=mouse_pos):
+                        del self.player
+                        self.player = Player(self, self.player_startpos, (16, 28))
+                        self.run(level)
+                    elif self.quit_button.is_clicked(mouse_pos=mouse_pos):
+                        pygame.quit()
+                        sys.exit()
 
             # Sprawdzenie, czy gracz wygrał
             if self.player.win:
@@ -525,68 +578,24 @@ class Game:
 
                 # Pauza
                 if gamePaused:
-                    darken_surface = pygame.Surface(self.display.get_size(), pygame.SRCALPHA)
-                    darken_surface.fill((0, 0, 0, 150))  # Ostatnia wartość to przezroczystość (alpha)
-
-                    # Oblicz proporcje względem ekranu
-                    #TODO: Sprawdzić czy da się zamienić na globalne RES_WIDTH i RES_HEIGHT, mi nie działą :(
-                    screen_w = self.display.get_width()
-                    screen_h = self.display.get_height()
-
-                    # Wymiary przycisków jako % ekranu
-                    banner_w = screen_w * 0.6
-                    banner_h = screen_h * 0.15
-                    button_w = screen_w * 0.4
-                    button_h = screen_h * 0.12
-                    x_center = screen_w / 2 - button_w / 2
-
-                    # Skalowanie rozmiaru czcionki proporcjonalnie do wysokości ekranu
-                    font_size = int(screen_h * 0.05)
-                    banner_font_size = int(screen_h * 0.07)
-
-                    # Przycisk PAUSED jako banner (bez akcji, tylko wizualnie)
-                    self.paused_banner = Button(
-                        'PAUSED',
-                        screen_w / 2 - banner_w / 2,
-                        screen_h * 0.15,
-                        banner_w,
-                        banner_h,
-                        "data/images/banner_scroll_wide_thin.png",
-                        font_size=banner_font_size,
-                        highlight=False
-                    )
-
-                    # Pozycje przycisków (pionowo)
-                    spacing = screen_h * 0.15
-                    y_start = screen_h * 0.15
-
+                    mouse_pos = Button.get_scaled_mouse_pos(self, self.screen, self.display)
                     # 4 przyciski menu pauzy
-                    self.resume_button = Button('Resume', x_center, y_start + spacing * 1, button_w, button_h,
-                                                "data/images/banner_scroll_wide_thin.png", font_size=font_size)
-                    self.settings_button = Button('Restart', x_center, y_start + spacing * 2, button_w, button_h,
-                                                  "data/images/banner_scroll_wide_thin.png", font_size=font_size)
-                    self.restart_button = Button('Main menu', x_center, y_start + spacing * 3, button_w, button_h,
-                                                 "data/images/banner_scroll_wide_thin.png", font_size=font_size-2)
-                    self.quit_button = Button('Quit', x_center, y_start + spacing * 4, button_w, button_h,
-                                              "data/images/banner_scroll_wide_thin.png", font_size=font_size)
+                    # TODO: Naprawić by guziki działały
 
                     # Rysuj przyciski
                     self.paused_banner.draw(self.display)
-                    self.resume_button.draw(self.display)
-                    self.settings_button.draw(self.display)
-                    self.restart_button.draw(self.display)
-                    self.quit_button.draw(self.display)
-                    #TODO: Naprawić by guziki działały
-                    for event in pygame.event.get():
-                        if event.type == pygame.QUIT:
-                            pygame.quit()
-                            sys.exit()
-                        if self.resume_button.is_clicked():
-                            gamePaused = False
-                            pygame.mouse.set_visible(False)
+                    self.resume_button.draw(self.display, mouse_pos=mouse_pos)
+                    self.menu_button.draw(self.display, mouse_pos=mouse_pos)
+                    self.restart_button.draw(self.display, mouse_pos=mouse_pos)
+                    self.quit_button.draw(self.display, mouse_pos=mouse_pos)
 
                 # Wyświetlenie wszystkiego na ekran
                 self.screen.blit(pygame.transform.scale(self.display, self.screen.get_size()), (0, 0))
+
+                if gamePaused:
+                    mouse_x, mouse_y = pygame.mouse.get_pos()
+                    self.screen.blit(self.cursor_image, (mouse_x - 30, mouse_y - 32))
+
                 if not gamePaused:
                     self.screen.blit(time_text, (10, 10))
                 pygame.display.update()
