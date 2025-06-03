@@ -135,6 +135,7 @@ class Game:
             "player/jump": Animation(load_images("entities/player/jump"), img_dur=4),
             "player/fall": Animation(load_images("entities/player/fall")),
             "player/crouch": Animation(load_images("entities/player/crouch"), img_dur=4),
+            "bar_jumping": load_image("bar_jumping.png"),
         }
         # Stworzenie chmur z użyciem klasy z pliku clouds
         self.clouds = Clouds(self.assets["clouds"], count=16)
@@ -169,8 +170,8 @@ class Game:
     def reset(self):
         self.movement = [False, False]
         # Win pos
-        # self.player_startpos = (100, -1700)
-        self.player_startpos = (1, 200)
+        self.player_startpos = (100, -1700)
+        #self.player_startpos = (1, 200)
         self.player = Player(self, self.player_startpos, (16, 28))
         self.scroll = [0, 0]
         self.start_time = pygame.time.get_ticks()
@@ -314,7 +315,7 @@ class Game:
     # Metoda do wyświetlenia podsumowania po przejściu poziomu
     #TODO: DO NAPRAWY, DZIAŁA ALE WYGLĄDA BRZYDKO
     def display_summary(self, ending_time):
-        font = pygame.font.Font("data/fonts/font.ttf", 64)
+        font = pygame.font.Font("data/fonts/font1.ttf", 64)
         font_end = pygame.font.Font(None, 32)
 
         input_active = True
@@ -339,7 +340,10 @@ class Game:
                     else:
                         color = color_inactive
                 if event.type == pygame.KEYDOWN:
-                    if event.key == pygame.K_RETURN:
+                    if event.key == pygame.K_ESCAPE:
+                        print(":)")
+                        #TODO: TOMEGG JAKBYS TU DODAŁ PRZYCISKI TO SUPER, PÓŹNIEJ WYTŁUMACZE
+                    elif event.key == pygame.K_RETURN:
                         user_name = text.strip()
                         if user_name != "":
                             input_active = False
@@ -350,19 +354,23 @@ class Game:
                             text += event.unicode
 
             # Rysowanie tła
-            background = pygame.Surface((self.screen.get_width(), self.screen.get_height()), pygame.SRCALPHA)
-            background.fill((0, 0, 0, 200))
+            background = pygame.transform.scale(self.assets[self.current_level], (self.screen.get_width(), self.screen.get_height()))
             self.screen.blit(background, (0, 0))
 
             # Teksty
-            win_text = font.render("You Win", True, (255, 255, 255))
+            self.win_banner = Button('You won!', RES_WIDTH / 2 - RES_WIDTH*0.225, RES_HEIGHT / 2 - RES_HEIGHT*0.4, RES_WIDTH*0.45, RES_HEIGHT*0.3,
+                              "data/images/banner_title.png", font_size=55, offset_y=-10, highlight=False)
+            self.win_banner2 = Button('', RES_WIDTH / 2 - RES_WIDTH , RES_HEIGHT / 2 - RES_HEIGHT * 0.3,
+                                     RES_WIDTH*2.5, RES_HEIGHT * 0.5,
+                                     "data/images/banner_big_hanging.png", font_size=55, offset_y=-10, highlight=False)
+            self.win_banner2.draw(self.screen)
+            self.win_banner.draw(self.screen)
             time_text = font.render("Time: " + ending_time, True, (255, 255, 255))
             jumps_text = font.render("Jumps: " + str(self.player.total_jumps), True, (255, 255, 255))
             username_text = font.render("Enter your name", True, (255, 255, 255))
             end1_text = font_end.render("Press enter to confirm, then", True, (255, 255, 255))
             end2_text = font_end.render("Press space to leave to main menu", True, (255, 255, 255))
 
-            self.screen.blit(win_text, ((self.screen.get_width() / 2) - 164, (self.screen.get_height() / 4.5) - 50))
             self.screen.blit(time_text, ((self.screen.get_width() / 2) - 464, self.screen.get_height() / 3.5 + 50))
             self.screen.blit(jumps_text, ((self.screen.get_width() / 2) + 100, self.screen.get_height() / 3.5 + 50))
             self.screen.blit(username_text, ((self.screen.get_width() / 2) - 400, self.screen.get_height() / 3.5 + 200))
@@ -399,7 +407,7 @@ class Game:
 
             # Wyświetlanie tego samego tła i tekstów
             self.screen.blit(background, (0, 0))
-            self.screen.blit(win_text, ((self.screen.get_width() / 2) - 164, (self.screen.get_height() / 4.5) - 50))
+            self.win_banner2.draw(self.screen)
             self.screen.blit(time_text, ((self.screen.get_width() / 2) - 464, self.screen.get_height() / 3.5 + 50))
             self.screen.blit(jumps_text, ((self.screen.get_width() / 2) + 100, self.screen.get_height() / 3.5 + 50))
             self.screen.blit(username_text, ((self.screen.get_width() / 2) - 400, self.screen.get_height() / 3.5 + 200))
@@ -557,24 +565,42 @@ class Game:
 
                     # Rysowanie paska siły skoku
                     if self.player.jumping:
-                        # Tymczasowo obliczamy aktualną moc ładowania
                         jump_duration = time.time() - self.player.jump_start_time
                         temp_power = min(jump_duration, self.player.max_jump_power)
-                        filled_width = int(100 * (temp_power / self.player.max_jump_power))
+                        filled_width = int(42 * (temp_power / self.player.max_jump_power))
 
+                        # Rozmiar paska ładowania (wewnętrzny, kolorowy)
+                        bar_width = 42
                         bar_height = 5
-                        bar_x = self.player.rect().centerx - render_scroll[0] - 50  # Adjust for camera scroll
-                        bar_y = self.player.rect().top - render_scroll[1] - 20  # Adjust for camera scroll
 
-                        # Gradient od zielonego (na początku) do czerwonego (na końcu)
+                        # Rozmiar ramki (tekstury)
+                        border_surface = self.assets["bar_jumping"]
+                        border_width, border_height = border_surface.get_size()
+
+                        # Oblicz pozycję ramki
+                        border_x = self.player.rect().centerx - render_scroll[0] - border_width // 2
+                        border_y = self.player.rect().top - render_scroll[1] - border_height - 5  # lekko nad graczem
+
+                        # Oblicz pozycję wewnętrznego paska (wycentrowanego w ramce)
+                        bar_x = border_x + (border_width - bar_width) // 2
+                        bar_y = border_y + (border_height - bar_height) // 2
+
+                        # Kolorowy pasek (gradient zielony → czerwony)
                         ratio = temp_power / self.player.max_jump_power
                         red = int(255 * ratio)
                         green = int(255 * (1 - ratio))
                         color = (red, green, 0)
 
+                        # Wypełniony fragment
                         pygame.draw.rect(self.display, color, (bar_x, bar_y, filled_width, bar_height))
-                        pygame.draw.rect(self.display, (128, 128, 128),
-                                         (bar_x + filled_width, bar_y, 100 - filled_width, bar_height))
+
+                        # Szary fragment niewypełniony
+                        if filled_width < bar_width:
+                            pygame.draw.rect(self.display, (128, 128, 128),
+                                             (bar_x + filled_width, bar_y, bar_width - filled_width, bar_height))
+
+                        # Na koniec: narysuj ramkę z tekstury
+                        self.display.blit(border_surface, (border_x, border_y))
 
                 # Pauza
                 if gamePaused:
