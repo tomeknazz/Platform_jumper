@@ -120,8 +120,11 @@ class Player(PhysicsEntity):
 
     # Metoda do update'tu gracza
     def update(self, tilemap, movement=(0, 0)):
-        # Prevent horizontal movement if airborne
-        if self.air_time > 4:
+        # Blokada ruchu poziomego na śniegu
+        if self.collide_type_bottom == "grass_thick_snow":
+            movement = (0, movement[1])
+        # Po lodzie można się ślizgać, więc nie blokujemy ruchu, ale nie dodajemy tarcia
+        elif self.air_time > 4:
             movement = (0, movement[1])
         super().update(tilemap, movement=movement)
         # Sprawdzanie, z jakim typem bloku występuje kolizja
@@ -134,14 +137,15 @@ class Player(PhysicsEntity):
                 self.jumping = False
                 self.jumped = 0
             if self.collide_type_bottom == "ice":  # LÓD
-                # Ślizganie się po lodzie
+                # Ślizganie się po lodzie (brak natychmiastowego zatrzymania)
                 if self.velocity[0] > 0:
-                    self.velocity[0] = max(0, self.velocity[0] - 0.2)
+                    self.velocity[0] = max(0, self.velocity[0] - 0.05)
                 elif self.velocity[0] < 0:
-                    self.velocity[0] = min(0, self.velocity[0] + 0.2)
+                    self.velocity[0] = min(0, self.velocity[0] + 0.05)
                 self.snow = False
             elif self.collide_type_bottom == "grass_thick_snow":
                 self.snow = True
+                self.velocity[0] = 0  # Całkowite zatrzymanie na śniegu
             elif self.collide_type_bottom == "win_tiles":
                 self.win = True
             else:

@@ -3,6 +3,7 @@ import os
 import sys
 from openpyxl import Workbook
 from openpyxl import load_workbook
+from openpyxl.styles.builtins import currency
 
 BASE_IMG_PATH = "data/images/"
 
@@ -19,63 +20,6 @@ def load_images(path):
     for img_name in sorted(os.listdir(BASE_IMG_PATH + path)):
         images.append(load_image(path + "/" + img_name))
     return images
-
-
-# Pobieranie inputu od gracza
-# def get_user_input(screen):
-#     font = pygame.font.Font(None, 64)
-#     input_box = pygame.Rect((screen.get_width() / 2) - 200, (screen.get_height() / 2.5 + 250), 400, 64)
-#     color_inactive = pygame.Color('lightskyblue3')
-#     color_active = pygame.Color('dodgerblue2')
-#     color = color_inactive
-#     active = False
-#     text = ''
-#     done = False
-#     cursor_img = pygame.image.load("data/images/cursor1.png").convert_alpha()
-#
-#     # Utwórz przezroczyste tło tylko raz
-#     background = pygame.Surface((screen.get_width(), screen.get_height()), pygame.SRCALPHA)
-#     background.fill((0, 0, 0, 200))  # przezroczyste czarne tło
-#
-#     clock = pygame.time.Clock()
-#
-#     while not done:
-#         for event in pygame.event.get():
-#             if event.type == pygame.QUIT:
-#                 pygame.quit()
-#                 sys.exit()
-#             if event.type == pygame.MOUSEBUTTONDOWN:
-#                 if input_box.collidepoint(event.pos):
-#                     active = not active
-#                 else:
-#                     active = False
-#                 color = color_active if active else color_inactive
-#             if event.type == pygame.KEYDOWN and active:
-#                 if event.key == pygame.K_RETURN:
-#                     done = True
-#                 elif event.key == pygame.K_BACKSPACE:
-#                     text = text[:-1]
-#                 else:
-#                     text += event.unicode
-#
-#         # Rysuj tło
-#         screen.blit(background, (0, 0))
-#
-#         # Rysuj tekst
-#         txt_surface = font.render(text, True, color)
-#         width = max(400, txt_surface.get_width() + 10)
-#         input_box.w = width
-#         screen.blit(txt_surface, (input_box.x + 5, input_box.y + 5))
-#         pygame.draw.rect(screen, color, input_box, 2)
-#
-#         # Rysuj kursor
-#         mouse_x, mouse_y = pygame.mouse.get_pos()
-#         screen.blit(cursor_img, (mouse_x - 30, mouse_y - 32))
-#
-#         pygame.display.flip()
-#         clock.tick(60)  # ograniczenie FPS
-#     return text
-
 
 # Zapisywanie do xlsx
 def save_to_excel(user_name, time, total_jumps, level_beaten):
@@ -97,6 +41,42 @@ def save_to_excel(user_name, time, total_jumps, level_beaten):
 
     wb.save(filename)
 
+from openpyxl import load_workbook
+
+from openpyxl import load_workbook
+
+def load_from_excel(current_map):
+    filename = 'Ranking.xlsx'
+    try:
+        wb = load_workbook(filename)
+        ws = wb.active
+        data = []
+        for row in ws.iter_rows(min_row=2, values_only=True):
+            if row.count(None) == len(row):
+                continue
+            if len(row) > 3 and row[3] == current_map:
+                # Pomijaj 4. kolumnę w danych (indeks 3)
+                filtered_row = row[:3] + row[4:]  # zachowaj wszystko oprócz indeksu 3
+                data.append(filtered_row)
+
+        # Sortuj według drugiej kolumny (czas – indeks 1)
+        data.sort(key=lambda x: x[1])
+        return data
+
+    except FileNotFoundError:
+        print("File not found. Please save some data first.")
+        return []
+    except Exception as e:
+        print(f"An error occurred: {e}")
+        return []
+
+
+    except FileNotFoundError:
+        print("File not found. Please save some data first.")
+        return []
+    except Exception as e:
+        print(f"An error occurred: {e}")
+        return []
 
 # Klasa z animacjami
 class Animation:
