@@ -147,9 +147,8 @@ class Game:
         # Atrybut z czasem rozpoczęcia gry to późniejszego liczenia go i wyświetlania
         self.start_time = 0
         # Załadowanie tła menu i przeskalowanie go
-
-        self.background_menu = Button._scale_image_pixel_art(pygame.image.load("data/images/menu_bg2.jpg").convert(),
-                                                             RES_WIDTH, RES_HEIGHT)
+        self.background_menu_original = pygame.image.load("data/images/menu_bg2.jpg").convert()
+        self.background_menu = self._scale_pixel_art_image(self.background_menu_original, RES_WIDTH, RES_HEIGHT)
         # Atrybut z obecnym poziomem
         self.current_level = None
         # Add audio instance
@@ -169,8 +168,8 @@ class Game:
     def reset(self):
         self.movement = [False, False]
         # Win pos
-        self.player_startpos = (100, -1700)
-        #self.player_startpos = (1, 200)
+        #self.player_startpos = (100, -1700)
+        self.player_startpos = (1, 200)
         self.player = Player(self, self.player_startpos, (16, 28))
         self.scroll = [0, 0]
         self.start_time = pygame.time.get_ticks()
@@ -239,8 +238,8 @@ class Game:
                 self.help_text.draw(self.screen)
             if self.settings:
                 self.settings_text.draw(self.screen)
-            self.help_button.draw(self.screen)
-            self.settings_button.draw(self.screen)
+            # self.help_button.draw(self.screen)
+            # self.settings_button.draw(self.screen)
             mouse_x, mouse_y = pygame.mouse.get_pos()
             self.screen.blit(self.cursor_image, (mouse_x - self.cursor_offset[0], mouse_y - self.cursor_offset[1]))
             pygame.display.update()
@@ -303,8 +302,8 @@ class Game:
                 self.help_text.draw(self.screen)
             if self.settings:
                 self.settings_text.draw(self.screen)
-            self.help_button.draw(self.screen)
-            self.settings_button.draw(self.screen)
+            #self.help_button.draw(self.screen)
+            #self.settings_button.draw(self.screen)
 
             mouse_x, mouse_y = pygame.mouse.get_pos()
             self.screen.blit(self.cursor_image, (mouse_x - self.cursor_offset[0], mouse_y - self.cursor_offset[1]))
@@ -659,6 +658,31 @@ class Game:
                     self.screen.blit(time_text, (10, 10))
                 pygame.display.update()
                 self.clock.tick(60)  # ograniczenie do 60fps
+
+    # Metoda do skalowania obrazu w stylu pixel art bez rozmycia
+    def _scale_pixel_art_image(self, image, target_width, target_height):
+        # Wyłącz wygładzanie
+        pygame.display.set_mode((RES_WIDTH, RES_HEIGHT), pygame.HWSURFACE)
+        pygame.transform.set_smoothscale_backend('GENERIC')
+
+        # Pobierz oryginalne wymiary
+        original_width, original_height = image.get_size()
+
+        # Znajdź największy możliwy mnożnik całkowity
+        scale_x = target_width // original_width
+        scale_y = target_height // original_height
+        scale = max(1, min(scale_x, scale_y))
+
+        # Najpierw skaluj przez mnożnik całkowity (zachowuje ostre piksele)
+        if scale > 1:
+            intermediate_size = (original_width * scale, original_height * scale)
+            intermediate = pygame.transform.scale(image, intermediate_size)
+        else:
+            intermediate = image
+
+        # Następnie skaluj do dokładnego rozmiaru
+        final_image = pygame.transform.scale(intermediate, (target_width, target_height))
+        return final_image
 
 
 if __name__ == "__main__":
