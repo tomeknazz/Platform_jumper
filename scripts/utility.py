@@ -3,6 +3,7 @@ import os
 import sys
 from openpyxl import Workbook
 from openpyxl import load_workbook
+from openpyxl.styles.builtins import currency
 
 BASE_IMG_PATH = "data/images/"
 
@@ -97,6 +98,42 @@ def save_to_excel(user_name, time, total_jumps, level_beaten):
 
     wb.save(filename)
 
+from openpyxl import load_workbook
+
+from openpyxl import load_workbook
+
+def load_from_excel(current_map):
+    filename = 'Ranking.xlsx'
+    try:
+        wb = load_workbook(filename)
+        ws = wb.active
+        data = []
+        for row in ws.iter_rows(min_row=2, values_only=True):
+            if row.count(None) == len(row):
+                continue
+            if len(row) > 3 and row[3] == current_map:
+                # Pomijaj 4. kolumnę w danych (indeks 3)
+                filtered_row = row[:3] + row[4:]  # zachowaj wszystko oprócz indeksu 3
+                data.append(filtered_row)
+
+        # Sortuj według drugiej kolumny (czas – indeks 1)
+        data.sort(key=lambda x: x[1])
+        return data
+
+    except FileNotFoundError:
+        print("File not found. Please save some data first.")
+        return []
+    except Exception as e:
+        print(f"An error occurred: {e}")
+        return []
+
+
+    except FileNotFoundError:
+        print("File not found. Please save some data first.")
+        return []
+    except Exception as e:
+        print(f"An error occurred: {e}")
+        return []
 
 # Klasa z animacjami
 class Animation:
