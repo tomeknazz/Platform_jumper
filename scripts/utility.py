@@ -20,63 +20,6 @@ def load_images(path):
         images.append(load_image(path + "/" + img_name))
     return images
 
-
-# Pobieranie inputu od gracza
-# def get_user_input(screen):
-#     font = pygame.font.Font(None, 64)
-#     input_box = pygame.Rect((screen.get_width() / 2) - 200, (screen.get_height() / 2.5 + 250), 400, 64)
-#     color_inactive = pygame.Color('lightskyblue3')
-#     color_active = pygame.Color('dodgerblue2')
-#     color = color_inactive
-#     active = False
-#     text = ''
-#     done = False
-#     cursor_img = pygame.image.load("data/images/cursor1.png").convert_alpha()
-#
-#     # Utwórz przezroczyste tło tylko raz
-#     background = pygame.Surface((screen.get_width(), screen.get_height()), pygame.SRCALPHA)
-#     background.fill((0, 0, 0, 200))  # przezroczyste czarne tło
-#
-#     clock = pygame.time.Clock()
-#
-#     while not done:
-#         for event in pygame.event.get():
-#             if event.type == pygame.QUIT:
-#                 pygame.quit()
-#                 sys.exit()
-#             if event.type == pygame.MOUSEBUTTONDOWN:
-#                 if input_box.collidepoint(event.pos):
-#                     active = not active
-#                 else:
-#                     active = False
-#                 color = color_active if active else color_inactive
-#             if event.type == pygame.KEYDOWN and active:
-#                 if event.key == pygame.K_RETURN:
-#                     done = True
-#                 elif event.key == pygame.K_BACKSPACE:
-#                     text = text[:-1]
-#                 else:
-#                     text += event.unicode
-#
-#         # Rysuj tło
-#         screen.blit(background, (0, 0))
-#
-#         # Rysuj tekst
-#         txt_surface = font.render(text, True, color)
-#         width = max(400, txt_surface.get_width() + 10)
-#         input_box.w = width
-#         screen.blit(txt_surface, (input_box.x + 5, input_box.y + 5))
-#         pygame.draw.rect(screen, color, input_box, 2)
-#
-#         # Rysuj kursor
-#         mouse_x, mouse_y = pygame.mouse.get_pos()
-#         screen.blit(cursor_img, (mouse_x - 30, mouse_y - 32))
-#
-#         pygame.display.flip()
-#         clock.tick(60)  # ograniczenie FPS
-#     return text
-
-
 # Zapisywanie do xlsx
 def save_to_excel(user_name, time, total_jumps, level_beaten):
     filename = 'Ranking.xlsx'

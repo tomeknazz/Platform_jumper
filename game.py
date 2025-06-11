@@ -169,8 +169,8 @@ class Game:
     def reset(self):
         self.movement = [False, False]
         # Win pos
-        self.player_startpos = (100, -1700)
-        #self.player_startpos = (1, 200)
+        #self.player_startpos = (100, -1700)
+        self.player_startpos = (1, 200)
         self.player = Player(self, self.player_startpos, (16, 28))
         self.scroll = [0, 0]
         self.start_time = pygame.time.get_ticks()
@@ -239,8 +239,8 @@ class Game:
                 self.help_text.draw(self.screen)
             if self.settings:
                 self.settings_text.draw(self.screen)
-            self.help_button.draw(self.screen)
-            self.settings_button.draw(self.screen)
+            # self.help_button.draw(self.screen)
+            # self.settings_button.draw(self.screen)
             mouse_x, mouse_y = pygame.mouse.get_pos()
             self.screen.blit(self.cursor_image, (mouse_x - self.cursor_offset[0], mouse_y - self.cursor_offset[1]))
             pygame.display.update()
@@ -303,8 +303,8 @@ class Game:
                 self.help_text.draw(self.screen)
             if self.settings:
                 self.settings_text.draw(self.screen)
-            self.help_button.draw(self.screen)
-            self.settings_button.draw(self.screen)
+            #self.help_button.draw(self.screen)
+            #self.settings_button.draw(self.screen)
 
             mouse_x, mouse_y = pygame.mouse.get_pos()
             self.screen.blit(self.cursor_image, (mouse_x - self.cursor_offset[0], mouse_y - self.cursor_offset[1]))
